@@ -5,7 +5,7 @@ import pygame.color as pc
 import pymunk as pm
 from pymunk import Vec2d
 import pymunk.pygame_util
-import pdb
+#import pdb
 #########################################
 #####		Initializing
 #########################################
@@ -29,7 +29,7 @@ def to_pygame(p):
 boxw=60
 boxh=30
 mass=0.1
-inertia=pymunk.moment_for_poly(0.1,[(0,0), (0,boxh), (boxw,boxh), (boxw,0)], (boxw/2.,boxh/2.))
+inertia=pymunk.moment_for_poly(0.1,[(0,0), (0,boxh), (boxw,boxh), (boxw,0)], (0,0))
 
 body = pm.Body(mass, inertia)
 body.position = 200,100
@@ -39,7 +39,7 @@ space.add(body, shape3)
 
 bodya = pm.Body(mass, inertia)
 bodya.position = 200,200
-bodya.angle = math.pi/2
+bodya.angle = math.pi/2+math.pi
 shape3a = pm.Poly(bodya, [(0,0), (0,boxh), (boxw,boxh), (boxw,0)], (-boxw/2.,-boxh/2.))
 shape3a.color = pg.color.THECOLORS["red"]
 space.add(bodya, shape3a)
@@ -60,11 +60,11 @@ while running:
     inertia=pymunk.moment_for_poly(0.1,[(0,0), (0,boxh), (boxw,boxh), (boxw,0)], (0,0))
     body.moment=inertia
     bodya.moment=inertia
-    pdb.set_trace()
-    shape3.unsafe_set_vertices([(0,0), (0,boxh), (boxw,boxh), (boxw,0)],(-boxw/2.,-boxh/2.))
+    shape3.unsafe_set_vertices([(0,0), (0,boxh), (boxw,boxh), (boxw,0)],offset=(-boxw/2.,-boxh/2.))
     #shape3.offset=(-boxw/2.,-boxh/2.)
-    shape3a.unsafe_set_vertices([(0,0), (0,boxh), (boxw,boxh), (boxw,0)],(-boxw/2.,-boxh/2.))
+    shape3a.unsafe_set_vertices([(0,0), (0,boxh), (boxw,boxh), (boxw,0)],offset=(-boxw/2.,-boxh/2.))
     #shape3a.offset=(-boxw/2.,-boxh/2.)
+    #raw_input()
 
     ## Draw
     screen.fill(pg.color.THECOLORS["black"])
