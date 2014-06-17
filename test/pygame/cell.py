@@ -31,22 +31,48 @@ def to_pygame(p):
 #########################################
 #####		    Run
 #########################################
-radius=25
+#radius=25
+#mass=0.1
+#inertia = pm.moment_for_circle(mass,0, radius, (0,0))
+#body = pm.Body(mass, inertia)
+#body.position = 200,400
+#shape = pm.Circle(body,radius,(0,0))
+#shape.friction = 0.5
+#shape.elasticity = 0.5
+#body2 = pm.Body(mass, inertia)
+#body2.position = 100,300
+#shape2 = pm.Circle(body2,radius,(0,0))
+#shape2.friction = 0.5
+#shape2.elasticity = 0.5
+boxw=60
+boxh=30
 mass=0.1
-inertia = pm.moment_for_circle(mass,0, radius, (0,0))
+inertia=pymunk.moment_for_box(0.1,boxw,boxh)
+
 body = pm.Body(mass, inertia)
 body.position = 200,400
-shape = pm.Circle(body,radius,(0,0))
-shape.friction = 0.5
-shape.elasticity = 0.5
+shape1 = pm.Circle(body,boxh/2.,(-boxw/2.,0))
+shape2 = pm.Circle(body,boxh/2.,(boxw/2.,0))
+shape3 = pm.Poly(body, [(0,0), (0,boxh), (boxw,boxh), (boxw,0)], (-boxw/2.,-boxh/2.))
+shape1.color = pg.color.THECOLORS["red"]
+shape2.color = pg.color.THECOLORS["red"]
+shape3.color = pg.color.THECOLORS["red"]
+#shape3 = pm.Poly(body, [(0,0), (0,boxh), (boxw,boxh), (boxw,0)],(boxw/2.,boxh/2.))
+space.add(body, shape1, shape2, shape3)
 
-body2 = pm.Body(mass, inertia)
-body2.position = 100,300
-shape2 = pm.Circle(body2,radius,(0,0))
-shape2.friction = 0.5
-shape2.elasticity = 0.5
+bodya = pm.Body(mass, inertia)
+bodya.position = 200,300
+bodya.angle = pi/3
+shape1a = pm.Circle(bodya,boxh/2.,(-boxw/2.,0))
+shape2a = pm.Circle(bodya,boxh/2.,(boxw/2.,0))
+shape3a = pm.Poly(bodya, [(0,0), (0,boxh), (boxw,boxh), (boxw,0)], (-boxw/2.,-boxh/2.))
+shape1a.color = pg.color.THECOLORS["red"]
+shape2a.color = pg.color.THECOLORS["red"]
+shape3a.color = pg.color.THECOLORS["red"]
+#shape3 = pm.Poly(body, [(0,0), (0,boxh), (boxw,boxh), (boxw,0)],(boxw/2.,boxh/2.))
+space.add(bodya, shape1a, shape2a, shape3a)
 
-space.add(body, shape, body2, shape2)
+
 
 while running:
     ##Events
@@ -57,26 +83,26 @@ while running:
             running = False
         elif event.type == pg.KEYDOWN and event.key == pg.K_p:
             pg.image.save(screen, "contact_with_friction.png")
-    #boxw+=1
-    #boxh=30
-    #inertia=pymunk.moment_for_box(0.1,boxw,boxh)
-    #body = pm.Body(mass, inertia)
-    #body.position = 200,400
-    #shape1 = pm.Circle(body,boxh/2.,(-boxw/2.,0))
-    #shape2 = pm.Circle(body,boxh/2.,(boxw/2.,0))
-    #shape3 = pm.Poly(body, [(0,0), (0,boxh), (boxw,boxh), (boxw,0) ], (-boxw/2.,-boxh/2.))
-    #shape1.color = pg.color.THECOLORS["red"]
-    #shape2.color = pg.color.THECOLORS["red"]
-    #shape3.color = pg.color.THECOLORS["red"]
-    #shape3 = pm.Poly(body, [(-30,0), (0,3), (10,0), (0,-3)],(boxw/2.,boxh/2.))
-    #space.add(body,shape3)
-    radius+=0.2
-    shape.unsafe_set_radius(radius)
-    shape2.unsafe_set_radius(radius)
+    #radius+=0.2
+    #shape.unsafe_set_radius(radius)
+    boxw+=1
+
+    inertia=pymunk.moment_for_box(0.1,boxw,boxh)
+    body.moment=inertia
+    bodya.moment=inertia
+
+    shape3.unsafe_set_vertices([(0,0), (0,boxh), (boxw,boxh), (boxw,0)])
+    shape3.offset=(-boxw/2.,-boxh/2.)
+    shape1.unsafe_set_offset((-boxw/2.,0))
+    shape2.unsafe_set_offset((boxw/2.,0))
+    shape3a.unsafe_set_vertices([(0,0), (0,boxh), (boxw,boxh), (boxw,0)])
+    shape3a.offset=(-boxw/2.,-boxh/2.)
+    shape1a.unsafe_set_offset((-boxw/2.,0))
+    shape2a.unsafe_set_offset((boxw/2.,0))
     ## Draw
     screen.fill(pg.color.THECOLORS["black"])
     pm.pygame_util.draw(screen, space)
-
+    
     ### Update physics
     for x in range(1):
         space.step(dt)
