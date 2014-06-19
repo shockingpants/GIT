@@ -29,8 +29,8 @@ def to_pygame(p):
 boxw=60
 boxh=30
 mass=0.1
-inertia=pymunk.moment_for_poly(0.1,[(0,0), (0,boxh), (boxw,boxh), (boxw,0)], (0,0))
-
+#inertia=pymunk.moment_for_poly(0.1,[(0,0), (0,boxh), (boxw,boxh), (boxw,0)], (0,0))
+inertia=pymunk.moment_for_poly(0.1,[(-boxw/2.0,-boxh/2.0), (-boxw/2.0,boxh/2.0), (boxw/2.0,boxh/2.0), (boxw/2.0,boxh/2.0)], (0,0))
 body = pm.Body(mass, inertia)
 body.position = 200,100
 shape3 = pm.Poly(body, [(0,0), (0,boxh), (boxw,boxh), (boxw,0)], (-boxw/2.,-boxh/2.))
@@ -38,10 +38,10 @@ shape3.color = pg.color.THECOLORS["red"]
 space.add(body, shape3)
 
 bodya = pm.Body(mass, inertia)
-bodya.position = 200,200
+bodya.position = 240,200
 bodya.angle = math.pi/2+math.pi
 shape3a = pm.Poly(bodya, [(0,0), (0,boxh), (boxw,boxh), (boxw,0)], (-boxw/2.,-boxh/2.))
-shape3a.color = pg.color.THECOLORS["red"]
+shape3a.color = pg.color.THECOLORS["green"]
 space.add(bodya, shape3a)
 
 
@@ -56,7 +56,7 @@ while running:
         elif event.type == pg.KEYDOWN and event.key == pg.K_p:
             pg.image.save(screen, "contact_with_friction.png")
 
-    boxw+=0.2
+    boxw+=0.3
     inertia=pymunk.moment_for_poly(0.1,[(0,0), (0,boxh), (boxw,boxh), (boxw,0)], (0,0))
     body.moment=inertia
     bodya.moment=inertia
