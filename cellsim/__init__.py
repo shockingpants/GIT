@@ -69,21 +69,23 @@ class cell(object):
 class cellp(cell):
 	##{{{
 	"""
-	Cell approximated by a box and two circles
+	Cell approximated by a polygon
 	
 	"""
-	def __init__(self,cellspace,num,pos,angle,radius=4,vertices=6,mass=0.1,**kwargs):
+	def __init__(self,cellspace,num,pos,angle,radius=4,length=8,vertices=6,mass=0.1,**kwargs):
 		##{{{
 		## Cell Attributes
 		super(cellp, self).__init__(cellspace,num,pos,angle,**kwargs)
 		self.radius=radius #Radius of hemisphere at cell end
-		self.length=self.radius*2 #The length of the cell measured from the center of the two hemisphere
+		self.length=length #The length of the cell measured from the center of the two hemisphere
 		self.height=self.radius*2
 		self.vertices=vertices #Number of vertices in the hemisphere
 		self.mass=mass #Self Explanatory
 		self.color=pg.color.THECOLORS["red"]
-		self.growthrate=0.5 #Growth rate can be a function of a state variable eventually	
+		self.growthrate=0.05 #Growth rate can be a function of a state variable eventually	
 		self.cycle='grow'
+		self.kwargs=kwargs	# This is done so that when the cell divides, any special attribute
+						  	# will be transfered to the daughter cell.
 		for i in kwargs.iterkeys(): 
 			vars(self)[i]=kwargs[i]
 
@@ -96,6 +98,8 @@ class cellp(cell):
 		#-----------
 		self.box = pm.Poly(self.body,self.ver,(-self.length/2.,-self.height/2.)) # Connecting box
 		#-----------
+		self.box.elasticity=0.5
+		self.box.friction=0
 		self.box.color = self.color
 		self.space.add(self.body, self.box)
 		##}}}
@@ -186,7 +190,10 @@ class cellp(cell):
 		"""
 		Triggered when cell is primed to divide
 		"""
+		###### Divides states into two
 		#statea,stateb=self.split_state()
+
+		###### Gets position of daughter cells
 		oldpos=self.body.position
 		a=self.box.get_vertices()[5] #top left hand corner
 		b=self.box.get_vertices()[13]
@@ -203,7 +210,11 @@ class cellp(cell):
 		self.body.position=pos1
 		self._update_cell()
 		#Updating New Daughter
-		self.cellspace.add_cell(cellp,pos2,self.body.angle,length=self.length,radius=self.radius) #add state next time
+		temp=self.cellspace.add_cell(cellp,pos2,self.body.angle,length=self.length,radius=self.radius,**self.kwargs) #TBDadd state next time
+		temp.body.velocity=self.body.velocity
+		temp.body.angular_velocity=self.body.angular_velocity
+		# TAKENOTE, MAKE SURE THERE ARE NO NEW KEYWORDS ADDED, OTHERWISE **KWARGS WILL INCREASE WITH EVERY DIVISION
+		# AND WE DON'T WANT THAT
 
 		##}}}
 	def split_state(self):
@@ -383,7 +394,6 @@ class cellc(cell):
 		##}}}
 
 	##}}}
-
 class cellspace(object):
 	##{{{
 	"""
@@ -414,6 +424,7 @@ class cellspace(object):
 		Add cells to the space
 		celltype should be the class itself (not an instance of the class)
 		Arguments specific to the cell type will be entered via kwargs
+		TBD Need to change cell division in such a way that when the cell divides, certain new cell properties are maintained.
 		""" 
 		assert issubclass(celltype, cell)
 		num=self.count
