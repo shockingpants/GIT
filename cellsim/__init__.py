@@ -472,6 +472,16 @@ class cellspace(object):
 			counter+=1
 		##}}}
 	##}}}
+class solspace(object):
+##{{{
+	"""
+	A space where diffusable molecules diffuse using the various algorithm
+	Eg. Runge- Kutta
+	Advantages and Disadvantages --> http://www.cfm.brown.edu/people/sg/AM35odes.pdf
+	"""
+	def __init__(self):
+		pass
+##}}}
 ##}}}
 
 #############################
