@@ -457,7 +457,7 @@ class cellspace(object):
 					elif event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE:
 						running = False
 					elif event.type == pg.KEYDOWN and event.key == pg.K_p:
-						pg.image.save(screen, "contact_with_friction.png")
+						pg.image.save(self.screen, "contact_with_friction.png")
 				## Draw on screen
 				self.screen.fill(pg.color.THECOLORS[bg])
 				for cell in activecells:
