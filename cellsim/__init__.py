@@ -82,7 +82,7 @@ class cellp(cell):
 		self.vertices=vertices #Number of vertices in the hemisphere
 		self.mass=mass #Self Explanatory
 		self.color=pg.color.THECOLORS["red"]
-		self.growthrate=0.05 #Growth rate can be a function of a state variable eventually	
+		self.growthrate=0.05 #Growth rate can be a function of a state variable eventually
 		self.cycle='grow'
 		self.kwargs=kwargs	# This is done so that when the cell divides, any special attribute
 						  	# will be transfered to the daughter cell.
@@ -457,7 +457,6 @@ class cellspace(object):
 					elif event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE:
 						running = False
 					elif event.type == pg.KEYDOWN and event.key == pg.K_p:
-						pg.image.save(screen, "contact_with_friction.png")
 						pg.image.save(self.screen, "contact_with_friction.png")
 				## Draw on screen
 				self.screen.fill(pg.color.THECOLORS[bg])
@@ -473,6 +472,16 @@ class cellspace(object):
 			counter+=1
 		##}}}
 	##}}}
+class solspace(object):
+##{{{
+	"""
+	A space where diffusable molecules diffuse using the various algorithm
+	Eg. Runge- Kutta
+	Advantages and Disadvantages --> http://www.cfm.brown.edu/people/sg/AM35odes.pdf
+	"""
+	def __init__(self):
+		pass
+##}}}
 ##}}}
 
 #############################
