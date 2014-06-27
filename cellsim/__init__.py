@@ -6,7 +6,7 @@ import pymunk as pm
 from pymunk import Vec2d
 import pygame_draw
 import numpy as np
-
+import fipy as fp
 ############################
 ####		Class
 ############################
@@ -66,11 +66,124 @@ class cell(object):
 		##}}}
 	
 	##}}}
+class cellspace(object):
+	##{{{
+	"""
+	Keeps track of all cells. Decides which cells are active, which are not active. 
+	2nd space is the space that pymunk use to keep track of the body and shapes (physics space).
+	3rd space is the space that screen that pygame use to draw shapes.
+	"""
+	def __init__(self,t0=0,dt=1.0/60.0,dim=(600,600),view=True):
+		##{{{
+		"""
+		each pixel is 0.1um
+		"""
+		self.view=view # Determine if we launch pygame
+		if self.view:
+			pg.init()
+			self.screen = pg.display.set_mode(dim)
+			self.clock = pg.time.Clock()
+		self.dim=dim
+		self.t0=t0 #Initial Time
+		self.dt=dt #Time step
+		self.time=self.t0
+		self.space = pm.Space()
+		self.cells={}
+		self.active_cells={}
+		self.inactive_cells={}
+		self.count=0
+		self.solspace=solspace()
+		##}}}	
+	def add_cell(self,celltype,pos,angle=0,**kwargs):
+		##{{{	
+		"""
+		Add cells to the space
+		celltype should be the class itself (not an instance of the class)
+		pos should be a tuple (x,y)
+		Arguments specific to the cell type will be entered via kwargs
+		TBD Need to change cell division in such a way that when the cell divides, certain new cell properties are maintained.
+		""" 
+		assert issubclass(celltype, cell)
+		num=self.count
+		self.active_cells[num]=celltype(self,num,pos,angle,**kwargs)
+		self.count+=1
+		return self.active_cells[num]
+		##}}}
+	def run(self,bg="white"):
+		##{{{
+		running=True
+		counter=0
+		while running:
+			
+			activecells=list(self.active_cells.itervalues())
+			for cell in activecells:
+				cell.evolve(self.dt)
+				
+			### Update physics
+			self.space.step(self.dt)
+			if np.mod(counter,100)==0:
+				print "Number of cells=",len(self.active_cells)
+	
+			## Pygame
+			if self.view:
+				##Events
+				for event in pg.event.get():
+					if event.type == pg.QUIT:
+						running = False
+					elif event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE:
+						running = False
+					elif event.type == pg.KEYDOWN and event.key == pg.K_p:
+						pg.image.save(self.screen, "contact_with_friction.png")
+				## Draw on screen
+				self.screen.fill(pg.color.THECOLORS[bg])
+				for cell in activecells:
+					cell.draw()
+				#pygame_draw.draw(self.screen, self.space)			
+				self.clock.tick(50)
+				pg.display.set_caption("fps: " + str(self.clock.get_fps()))
+				pg.display.flip()
+
+			## Misc
+			self.time+=self.dt
+			counter+=1
+		##}}}
+	##}}}
+class solspace(object):
+##{{{
+	"""
+	A space where diffusable molecules diffuse using the various algorithm
+	Advantages and Disadvantages --> http://www.cfm.brown.edu/people/sg/AM35odes.pdf
+	Will use fipy as PDE solver
+	"""
+	def __init__(self,cellspac,size=(200,200),species):
+		##{{{
+		"""
+		We dont want the PDE solver to be huge, so the mesh size should be small, probably about 200x200
+		There may be other considerations such as grid size to cell size ratio, but for now, assume 200x200
+		"""
+		assert isinstance(cellspac,cellspace)
+		self.cellspace=cellspac #refers to the cell space that contains this sol space
+		nx,ny=size #Number of mesh along each axis
+		dx=0.1 #um
+		dy=0.1 #um
+		Lx=nx*dx
+		Ly=ny*dy
+		self.mesh = fp.Grid2D(dx=dx, dy=dy, nx=nx, ny=ny)
+		phi = fp.CellVariable(name = "", mesh = mesh, value = 0.)
+		D = 1.
+		self.eq = fp.TransientTerm() == fp.DiffusionTerm(coeff=D)
+		##}}}
+	
+	
+##}}}
+
+##--------Custom Cells--------------	
 class cellp(cell):
 	##{{{
 	"""
 	Cell approximated by a polygon
-	
+	1 px is 0.1um
+		
 	"""
 	def __init__(self,cellspace,num,pos,angle,radius=4,length=8,vertices=6,mass=0.1,**kwargs):
 		##{{{
@@ -394,94 +507,8 @@ class cellc(cell):
 		##}}}
 
 	##}}}
-class cellspace(object):
-	##{{{
-	"""
-	Keeps track of all cells. Decides which cells are active, which are not active. 
-	2nd space is the space that pymunk use to keep track of the body and shapes (physics space).
-	3rd space is the space that screen that pygame use to draw shapes.
-	"""
-	def __init__(self,t0=0,dt=1.0/60.0,dim=(600,600),view=True):
-		##{{{
-		self.view=view # Determine if we launch pygame
-		if self.view:
-			pg.init()
-			self.screen = pg.display.set_mode(dim)
-			self.clock = pg.time.Clock()
-		self.t0=t0 #Initial Time
-		self.dt=dt #Time step
-		self.time=self.t0
-		self.space = pm.Space()
-		self.cells={}
-		self.active_cells={}
-		self.inactive_cells={}
-		self.count=0
-		##}}}
-		
-	def add_cell(self,celltype,pos,angle=0,**kwargs):
-		##{{{	
-		"""
-		Add cells to the space
-		celltype should be the class itself (not an instance of the class)
-		Arguments specific to the cell type will be entered via kwargs
-		TBD Need to change cell division in such a way that when the cell divides, certain new cell properties are maintained.
-		""" 
-		assert issubclass(celltype, cell)
-		num=self.count
-		self.active_cells[num]=celltype(self,num,pos,angle,**kwargs)
-		self.count+=1
-		return self.active_cells[num]
-		##}}}
-
-	def run(self,bg="white"):
-		##{{{
-		running=True
-		counter=0
-		while running:
-			
-			activecells=list(self.active_cells.itervalues())
-			for cell in activecells:
-				cell.evolve(self.dt)
-				
-			### Update physics
-			self.space.step(self.dt)
-			if np.mod(counter,100)==0:
-				print "Number of cells=",len(self.active_cells)
-	
-			## Pygame
-			if self.view:
-				##Events
-				for event in pg.event.get():
-					if event.type == pg.QUIT:
-						running = False
-					elif event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE:
-						running = False
-					elif event.type == pg.KEYDOWN and event.key == pg.K_p:
-						pg.image.save(self.screen, "contact_with_friction.png")
-				## Draw on screen
-				self.screen.fill(pg.color.THECOLORS[bg])
-				for cell in activecells:
-					cell.draw()
-				#pygame_draw.draw(self.screen, self.space)			
-				self.clock.tick(50)
-				pg.display.set_caption("fps: " + str(self.clock.get_fps()))
-				pg.display.flip()
-
-			## Misc
-			self.time+=self.dt
-			counter+=1
-		##}}}
-	##}}}
-class solspace(object):
-##{{{
-	"""
-	A space where diffusable molecules diffuse using the various algorithm
-	Eg. Runge- Kutta
-	Advantages and Disadvantages --> http://www.cfm.brown.edu/people/sg/AM35odes.pdf
-	"""
-	def __init__(self):
-		pass
-##}}}
+##-------Custop cellspace-------------	
+#### Need to configure space for constraints, but work with no constraints for now. 
 ##}}}
 
 #############################
