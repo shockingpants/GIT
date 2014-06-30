@@ -10,7 +10,7 @@ import fipy as fp
 ############################
 ####		Class
 ############################
-##{{{
+##}}}
 class cell(object):
 	##{{{
 	"""
@@ -47,7 +47,7 @@ class cell(object):
 		"""
 		Gets the position of the cell
 		"""
-		pass
+		return self.body.position
 		##}}}
 	def get_neighbour(self):
 		##{{{
@@ -79,6 +79,7 @@ class cellspace(object):
 		each pixel is 0.1um
 		"""
 		self.view=view # Determine if we launch pygame
+		self.dx=self.dy=0.1 #0.1um
 		if self.view:
 			pg.init()
 			self.screen = pg.display.set_mode(dim)
@@ -92,7 +93,7 @@ class cellspace(object):
 		self.active_cells={}
 		self.inactive_cells={}
 		self.count=0
-		self.solspace=solspace()
+		self.solspace=solspace(self)
 		##}}}	
 	def add_cell(self,celltype,pos,angle=0,**kwargs):
 		##{{{	
@@ -114,7 +115,7 @@ class cellspace(object):
 		running=True
 		counter=0
 		while running:
-			
+			## Active Cell List	
 			activecells=list(self.active_cells.itervalues())
 			for cell in activecells:
 				cell.evolve(self.dt)
@@ -143,6 +144,9 @@ class cellspace(object):
 				pg.display.set_caption("fps: " + str(self.clock.get_fps()))
 				pg.display.flip()
 
+			## Signaling Molecule
+			self.solspace.run()
+
 			## Misc
 			self.time+=self.dt
 			counter+=1
@@ -155,35 +159,131 @@ class solspace(object):
 	Advantages and Disadvantages --> http://www.cfm.brown.edu/people/sg/AM35odes.pdf
 	Will use fipy as PDE solver
 	"""
-	def __init__(self,cellspac,size=(200,200),species):
+	def __init__(self,cellspac,dim=(200,200)):
 		##{{{
 		"""
+		cellspac is an instance of cellspace that this solspace will be associated with
 		We dont want the PDE solver to be huge, so the mesh size should be small, probably about 200x200
 		There may be other considerations such as grid size to cell size ratio, but for now, assume 200x200
+		Dimension of solspace will typically not match dimension of cellspace
 		"""
 		assert isinstance(cellspac,cellspace)
-		self.cellspace=cellspac #refers to the cell space that contains this sol space
-		nx,ny=size #Number of mesh along each axis
-		dx=0.1 #um
-		dy=0.1 #um
+		#------Mesh
+		cs=self.cellspace=cellspac #refers to the cell space that contains this sol space
+		self.dim=dim
+		nx,ny=dim #Number of mesh along each axis
+		#dx=nx/1.0/cs.dim[0]*cs.dx #normalizes dx length to that of cellspace
+		#dy=ny/1.0/cs.dim[1]*cs.dy
+		self.dx=dx=1.
+		self.dy=dy=1.
 		Lx=nx*dx
 		Ly=ny*dy
 		self.mesh = fp.Grid2D(dx=dx, dy=dy, nx=nx, ny=ny)
-		phi = fp.CellVariable(name = "", mesh = mesh, value = 0.)
-		D = 1.
-		self.eq = fp.TransientTerm() == fp.DiffusionTerm(coeff=D)
+		self.meshnum = self.mesh.getNumberOfCells() #Number of mesh grids in mesh
+		self.species={} #dictionary of signal_species
+		self.viewer={} #TEMP dictionary of viewers
+		##}}}
+	def _update_interface(self):
+		##{{{
+		"""
+		Changes the mesh CellVariable value based on position of cells and the rate of exchange.
+		TDB: Write a more elegant solution that can be changed from a master script, not from the 
+		__init__.py code.
+		"""
+		for spec in self.species.itervalues():
+			print spec.eq
+			print self.dim
+			print self.dx
+			print self.cellspace.dt
+			raw_input()
+			spec.eq.solve(var=spec,dt=self.cellspace.dt)
+			spec.setValue(spec+1, where=self.mask) # This is just a test code.
+			self.viewer[spec.name].plot()
+		##}}}
+	def _get_position(self):
+		##{{{
+		"""
+		Uses position of cells.
+		Returns mask, input for fp.CellVariable.setValue
+		"""
+		oldpos=([],[])
+		for cell in self.cellspace.active_cells.itervalues(): #Retrieves cells
+			x,y=cell.get_pos()
+			oldpos[0].append(x)
+			oldpos[1].append(y)
+		solpos=self.cellspace2solspace(oldpos)
+		ID=self.mesh._getNearestCellID(solpos)
+		self.mask=np.zeros(self.meshnum)
+		self.mask[ID]=1 #This is the actual mask of 1s and 0s, Can replace with True and False	
+		##}}}
+	def add_species(self,name,degradation,diffusion,value=0.,**kwargs):
+		##{{{
+		"""
+		Add class signal species
+		# Note, it is a little different from cellspace.add_cell(). Here, the input 
+		# is an instance of a class instead of referencing the class itself.
+		"""
+		newspecies=signal_species(name,self.mesh,degradation,diffusion,value,**kwargs)
+		newspecies.eq=fp.TransientTerm() == fp.DiffusionTerm(coeff=newspecies.diffusion)
+		self.species[name]=newspecies #This a dictionary that keeps track of species.
+		self.viewer[name]=fp.Viewer(vars=newspecies, datamin=0., datamax=1) #TEMP
+		
+		##}}}
+	def run(self):
+		##{{{
+		"""
+		Evolve the system
+		"""
+		self._get_position()
+		self._update_interface()
+
+		
+		##}}}
+	def cellspace2solspace(self,pos):
+		##{{{
+		"""
+		converts cellspace coordinate into solspace coordinate
+		pos is a tuple of (x,y)
+		"""
+		oldx=np.array(pos[0])
+		oldy=np.array(pos[1])
+		cs=self.cellspace
+		x=oldx/cs.dim[0]*self.dim[0]
+		y=oldy/cs.dim[1]*self.dim[1]
+		return (x,y)
+		##}}}
+	def solspace2cellspace(self,pos):
+		##{{{
+		"""
+		converts solspace coordinate into cellspace coordinate
+		pos is a tuple of (x,y)
+		"""
+		cs=self.cellspace
+		x=pos[0]/self.dim[0]*cs.dim[0]
+		y=pos[1]/self.dim[1]*cs.dim[1]
+		return (x,y)
 		##}}}
 	
 	
 ##}}}
-
+class signal_species(fp.CellVariable):
+	##{{{
+	"""
+	Create a new subclass using fp.CellVariable
+	"""
+	def __init__(self, name, mesh, degradation ,diffusion, value=0., **kwargs):
+		super(signal_species, self).__init__(name=name, mesh=mesh, value=value)
+		self.degradation=degradation
+		self.diffusion=diffusion
+		self.name=name
+		self.kwargs=kwargs
+	##}}}
 ##--------Custom Cells--------------	
 class cellp(cell):
 	##{{{
 	"""
 	Cell approximated by a polygon
-	1 px is 0.1um
-		
+	1 px is 0.1um	
 	"""
 	def __init__(self,cellspace,num,pos,angle,radius=4,length=8,vertices=6,mass=0.1,**kwargs):
 		##{{{
@@ -265,7 +365,6 @@ class cellp(cell):
 		verleft=np.array(verleft)
 		verright=verright+[self.length,self.radius]
 		verleft=verleft+[0,self.radius]
-		#pdb.set_trace()
 		self.ver=np.vstack(((0,0),verright,verleft[0:-1]))
 		##}}}
 	def draw(self):

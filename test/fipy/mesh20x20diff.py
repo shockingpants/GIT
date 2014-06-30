@@ -1,14 +1,14 @@
 import fipy as fp
 import numpy as np
-nx = 100
-ny = 100
+nx = 200
+ny = 200
 dx = 1.
 dy = dx
 L = dx * nx
 mesh = fp.Grid2D(dx=dx, dy=dy, nx=nx, ny=ny)
 phi = fp.CellVariable(name = "phi", mesh = mesh, value = 0.)
 psi = fp.CellVariable(name = "psi", mesh = mesh, value = 0.)
-D = 100.
+D = 1.
 eq = fp.TransientTerm() == fp.DiffusionTerm(coeff=D)
 eq2 = fp.TransientTerm() == fp.DiffusionTerm(coeff=D*10)
 #We apply Dirichlet boundary conditions
@@ -24,8 +24,9 @@ y=mesh.cellCenters[1]
 # Setting value and getting value from a particular cell
 #phi.setValue(1., where=((x < 55) & (x > 45 ) & (y < 55) & (y > 45 )))
 #ind=fipy.tools.numerix.nearest(mesh.cellCenters.globalValue,np.array([[1.2],[1.2]]))
-pos=((50,51,52,53,54,54,56,57),(50,51,52,53,54,54,56,57))
-ID=mesh._getNearestCellID(pos)
+#pos=((50,51,52,53,54,54,56,57),(50,51,52,53,54,54,56,57))
+#ID=mesh._getNearestCellID(pos)
+ID=array([20100, 20066])
 cellsnum=mesh.getNumberOfCells()
 whre=np.zeros(cellsnum)
 whre[ID]=1
