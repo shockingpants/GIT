@@ -1,8 +1,9 @@
 import fipy as fp
+import fipy.tools.numerix as fnumerix 
 import numpy as np
-nx = 200
-ny = 200
-dx = 
+nx = 5
+ny = 5
+dx = 1.0
 dy = dx
 L = dx * nx
 mesh = fp.Grid2D(dx=dx, dy=dy, nx=nx, ny=ny)
@@ -25,8 +26,9 @@ y=mesh.cellCenters[1]
 #phi.setValue(1., where=((x < 55) & (x > 45 ) & (y < 55) & (y > 45 )))
 #ind=fipy.tools.numerix.nearest(mesh.cellCenters.globalValue,np.array([[1.2],[1.2]]))
 #pos=((50,51,52,53,54,54,56,57),(50,51,52,53,54,54,56,57))
-#ID=mesh._getNearestCellID(pos)
-ID=array([20100, 20066])
+pos=((2,3),(2,3))
+ID=mesh._getNearestCellID(pos)
+#ID=array([20100, 20066])
 cellsnum=mesh.getNumberOfCells()
 whre=np.zeros(cellsnum)
 whre[ID]=1
@@ -38,18 +40,27 @@ psi.setValue(conc,where=whre)
 #We create a viewer to see the results
 if __name__ == '__main__':
 	viewer = fp.Viewer(vars=phi, datamin=0., datamax=20)
-	viewer2 = fp.Viewer(vars=psi, datamin=0., datamax=20)
 	viewer.plot()
-	viewer2.plot()
+	fig=plt.figure(11)
+	ax=fig.add_subplot(111)
+	xmin=0
+	ymin=0
+	xmax=nx*dx
+	ymax=ny*dy
+	data=fnumerix.reshape(fnumerix.array(phi), phi.mesh.shape[::-1])[::-1]
+	img=ax.imshow(data,extent=(xmin,xmax,ymin,ymax),vmin=0,vmax=20)
+
 #and solve the equation by repeatedly looping in time:
 timeStepDuration = 0.1 * dx**2 / (2 * D)
 steps = 1000
 for step in range(steps):
 	eq.solve(var=phi, dt=timeStepDuration)
 	eq2.solve(var=psi, dt=timeStepDuration)
-	phi.setValue(phi+1, where=whre)
+	phi.setValue(phi+10, where=whre)
 	if __name__ == '__main__':
 		viewer.plot()
+		data=fnumerix.reshape(fnumerix.array(phi), phi.mesh.shape[::-1])[::-1]
+		img.set_data(data)
+		fig.canvas.draw()	
 	if np.mod(step,10)==0:
 		raw_input("Press key to continue")
-
