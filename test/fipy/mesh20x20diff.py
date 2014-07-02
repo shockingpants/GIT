@@ -2,7 +2,7 @@ import fipy as fp
 import numpy as np
 nx = 200
 ny = 200
-dx = 1.
+dx = 
 dy = dx
 L = dx * nx
 mesh = fp.Grid2D(dx=dx, dy=dy, nx=nx, ny=ny)
