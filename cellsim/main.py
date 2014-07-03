@@ -12,6 +12,7 @@ import fipy as fp
 import fipy.tools.numerix as fnumerix
 from celltype import *
 from viewer import *
+import time
 
 ############################
 ####		Class
@@ -41,8 +42,11 @@ class cellspace(object):
 		self.inactive_cells={}
 		self.count=0
 		self.solspace=solspace(self)
+		###### Viewer
 		if self.view:
 			self.viewer=cellviewer(self) #This handles everything to do with viewing
+			self.play=True #Variable specifying state
+			self.pause=False
 
 		##}}}	
 	def add_cell(self,celltype,pos,angle=0,**kwargs):
@@ -62,30 +66,32 @@ class cellspace(object):
 		##}}}
 	def run(self):
 		##{{{
-		self.run=True #Variable specifying state
 		counter=0
-		while self.run:
-			## Active Cell List	
-			activecells=list(self.active_cells.itervalues())
-			for cell in activecells:
-				cell.evolve(self.dt)
+		while self.play:
+			if not self.pause:
+				## Active Cell List	
+				activecells=list(self.active_cells.itervalues())
+				for cell in activecells:
+					cell.evolve(self.dt)
+					
+				### Update physics
+				self.space.step(self.dt)
+				if np.mod(counter,100)==0:
+					print "Number of cells=",len(self.active_cells)
+		
+				## Signaling Molecule
+				self.solspace.run()
 				
-			### Update physics
-			self.space.step(self.dt)
-			if np.mod(counter,100)==0:
-				print "Number of cells=",len(self.active_cells)
-	
-			## Signaling Molecule
-			self.solspace.run()
-			
-			## Misc
-			self.time+=self.dt
-			counter+=1
-			
-			## Pygame
-			if self.view:
+				## Misc
+				self.time+=self.dt
+				counter+=1
+				
+				## Pygame
+				if self.view:
+					self.viewer.plot()
+			else:
 				self.viewer.plot()
-		##}}}
+			##}}}
 	##}}}
 class solspace(object):
 ##{{{
