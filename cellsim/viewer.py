@@ -103,8 +103,7 @@ class cellviewer(object):
 		TBD: Manage ticks and GUI
 		"""
 		self._plot_cells()
-		if len(self.solspace.species)>0:
-			self._plot_sol()		
+		self._plot_sol()
 		pg.display.flip()
 		##}}}
 
