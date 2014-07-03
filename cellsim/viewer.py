@@ -49,6 +49,28 @@ class cellviewer(object):
 		self.size = self.canvas.get_width_height() # Needed as an argument for pygame.image.fromstring
 		#self.img=self.ax.imshow(np.zeros(2),extent=self.extent,vmin=datamin,vmax=datamax) #Just for initializing. Zero data
 		##}}}
+	def _initialize(self):
+		##{{{
+		"""
+		Initializes after signaling species have been added
+		"""
+		##------ Signaling Species Specific
+		self.img={} #Dictionary referencing the plot
+		for ind,spec in enumerate(self.solspace.species.itervalues()):
+			data=fnumerix.reshape(fnumerix.array(spec), spec.mesh.shape[::-1])[::-1]
+			kwargs=spec.kwargs
+			datamin = kwargs['datamin'] if 'datamin' in kwargs else 0
+			datamax = kwargs['datamax'] if 'datamax' in kwargs else 1
+			color = kwargs['color'] if 'color' in kwargs else "#0000FF"
+			self.img[spec.name]=self.ax.imshow(data,extent=self.extent,alpha=1*0.5**ind,vmin=datamin,vmax=datamax,cmap=gen_cmap(color)) 
+			self.ctrl.add_switch(spec.name) # Add switch to GUI
+			print "added ",spec.name
+		import pdb
+		self.ctrl._initialize()
+		print self.ctrl.form
+		self.ctrl.form=gui.Form
+		print self.ctrl.form[spec.name]
+		##}}}
 	def _plot_cells(self):
 		##{{{
 		"""
@@ -75,20 +97,13 @@ class cellviewer(object):
 		Plots the solution layer
 		plots based on GUI ticks		
 		"""
-		if "img" not in vars(self): #Initialize
-			self.img={} #Dictionary referencing the plot
-			for ind,spec in enumerate(self.solspace.species.itervalues()):
-				data=fnumerix.reshape(fnumerix.array(spec), spec.mesh.shape[::-1])[::-1]
-				kwargs=spec.kwargs
-				datamin = kwargs['datamin'] if 'datamin' in kwargs else 0
-				datamax = kwargs['datamax'] if 'datamax' in kwargs else 1
-				color = kwargs['color'] if 'color' in kwargs else "#0000FF"
-				self.img[spec.name]=self.ax.imshow(data,extent=self.extent,alpha=1*0.5**ind,vmin=datamin,vmax=datamax,cmap=gen_cmap(color)) 
-		else: #Update
-			# TBD NEED TO ADD CONDITION FOR GUI
-			for spec in self.solspace.species.itervalues():
+		#Update
+		for spec in self.solspace.species.itervalues():
+			if self.ctrl.form[spec.name].value: #Checks the checkbox/gui/switch status
 				data=fnumerix.reshape(fnumerix.array(spec), spec.mesh.shape[::-1])[::-1]
 				self.img[spec.name].set_data(data)
+			else:
+				self.img[spec.name].set_data(np.zeros(2))
 			
 		self.canvas.draw()
 		renderer = self.canvas.get_renderer()
@@ -102,13 +117,62 @@ class cellviewer(object):
 		"""
 		TBD: Manage ticks and GUI
 		"""
+		if not self.init_state:
+			self._initialize()
 		self._plot_cells()
-		self._plot_sol()
+		if len(self.solspace.species)>0:
+			self._plot_sol()
 		pg.display.flip()
 		##}}}
 
 	##}}}
+class Control(gui.Table):
+	##{{{
+	"""
+	GUI coded using pgu.
+	"""
+	def __init__(self,**params):
+		##{{{
+		gui.Table.__init__(self,**params)
+		self.fg = (255,255,255)
+		self.tr()
+		self.td(gui.Label("Signal layers",color=self.fg),colspan=2)
+		##}}}
+	def _initialize(self):
+		##{{{
+		"""
+		This is different from init. Adds switches once signal species have been specified
+		"""
+		self.form = gui.Form()
+		self.app = gui.App()
+		self.c = gui.Container(align=-1,valign=-1)
+		#starCtrl = StarControl()
+		self.c.add(self,0,0)
+		self.app.init(self.c)
 
+		##}}}
+	def add_switch(self,label,default=False):
+		##{{{
+		"""
+		Adds a check box on which signal layer to display
+		"""
+		self.tr()
+		self.td(gui.Label("{0:s}: ".format(label),color=self.fg),align=1)
+		self.td(gui.Switch(value=False,name=label))
+		##}}}
+	def add_play():
+		##{{{
+		"""
+		"""
+		pass
+		##}}}
+	def add_stop():
+		##{{{
+		"""
+		"""
+		pass
+		##}}}
+	##}}}
 ##############################
 ####  Utility Function
 #############################
