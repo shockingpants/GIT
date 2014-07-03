@@ -176,9 +176,8 @@ class solspace(object):
 		"""
 		Evolve the system
 		"""
-		if len(self.species)>0:
-			self._get_position()
-			self._update_interface()
+		self._get_position()
+		self._update_interface()
 
 		
 		##}}}
