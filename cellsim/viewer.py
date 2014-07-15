@@ -16,8 +16,8 @@ import pymunk as pm
 
 import matplotlib
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import matplotlib.backends.backend_agg as agg
+import matplotlib.pyplot as plt
 
 import fipy as fp
 import fipy.tools.numerix as fnumerix
@@ -103,7 +103,8 @@ class cellviewer(object):
 		TBD: Manage ticks and GUI
 		"""
 		self._plot_cells()
-		self._plot_sol()
+		if len(self.solspace.species)>0:
+			self._plot_sol()		
 		pg.display.flip()
 		##}}}
 
