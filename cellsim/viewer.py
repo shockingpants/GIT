@@ -16,8 +16,8 @@ import pymunk as pm
 
 import matplotlib
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import matplotlib.backends.backend_agg as agg
+import matplotlib.pyplot as plt
 
 import fipy as fp
 import fipy.tools.numerix as fnumerix
@@ -122,10 +122,15 @@ class cellviewer(object):
 		if not self.init_state:
 			self._initialize()
 		self._plot_cells()
+<<<<<<< HEAD
+		if len(self.solspace.species)>0:
+			self._plot_sol()		
+=======
 		boolean=[self.gui.form[spec.name].value for spec in self.solspace.species.itervalues()] #list of switch status
 		if len(self.solspace.species)>0 and any(boolean):
 			self._plot_sol()
 		self.gui.app.paint()
+>>>>>>> FETCH_HEAD
 		pg.display.flip()
 		##}}}
 
