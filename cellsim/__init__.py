@@ -13,7 +13,7 @@ try:
 	from cellsim.celltype import *
 	from cellsim.viewer import *
 	from cellsim.main import *
-	from cellsim.sde import * 
+	from cellsim.integrator import * 
 	from sympy import *
 	from scitools import *
 except ImportError as err:

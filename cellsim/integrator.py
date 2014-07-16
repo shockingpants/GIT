@@ -100,13 +100,13 @@ class SDE_integrator(object):
 	def __init__(self,func,method="euler"):
 		"""
 		func is a list of functions for integration
-		func should require 3 parameters --> func(t,y0,**kwargs) where kwargs are the param
-
+		func should require 2 or 3 parameters --> func(t,y,param) where kwargs are the param
 		method is the type of integration
 		"""
 		self.func=func
 		self.method=method
 		self.success=True #Checks the success of integration. Based on rel and abs err
+		self.param=None
 
 	def set_initial_value(self,y0,t0):
 		"""
@@ -119,30 +119,47 @@ class SDE_integrator(object):
 	def set_parameters(self,param):
 		"""
 		Sets param needed for the ODE
-		param should be in the form of a dictionary for unpacking
+		param can be in any form that the function codes for
 		"""
 		self.param=param 
 	
 	def successful(self):
+		"""
+		Should return an error message if something wrong happened.
+		"""
 		return self.success
 	
-	def integrate(self,t,dt):
+	def integrate(self,new_t):
 		"""
 		t is the current time. Important for time dependent SDE
 		dt is the timestep
 		"""
+		dt=new_t-self.t
 		if self.method=="rk":
 			self.y = self.rk(t,dt)
-			self.t += dt
+			self.t = new_t
 		elif self.method=="euler":
 			self.y = self.euler(t,dt)
-			self.t += dt
+			self.t = new_t
 		else:
 			raise Exception("Unknown Method")
-
+		## Check and negate negative values in an ad-hoc way. Need some ways to quantify it
+		check = self.y < 0
+		if check.any():
+			self.y[check] *= -1
 
 		return self.y #
+	
+	def evolve(self,t,y,param):
+		"""
+		Changes func into something that takes either param or not
+		"""
+		if param is None:
+			return self.func(t,y)
+		else:
+			return self.func(t,y,param)
 		
+
 	def rk(self,t,dt):
 		"""
 		Applies Runge Kutta 
@@ -150,7 +167,7 @@ class SDE_integrator(object):
 		current is t
 		timestep is dt
 		"""
-		print "applying rk"
+		print "Applying rk"
 		a21 =   2.71644396264860
 		a31 = - 6.95653259006152
 		a32 =   0.78313689457981
@@ -170,17 +187,17 @@ class SDE_integrator(object):
 		assert "y" in vars(self)
 		rv_n=np.random.randn(len(self.y))
 		x1 = self.y
-		k1 = dt * self.func(t,x1,self.param) + np.sqrt(dt) * np.dot(x1, rv_n)
+		k1 = dt * self.evolve(t,x1,self.param) + np.sqrt(dt) * np.dot(np.sqrt(x1), rv_n)
 		#Make sure output of func is np.array
 
 		x2 = x1 + a21 * k1
-		k2 = dt * self.func(t,x2,self.param) + np.sqrt(dt) * np.dot(x1, rv_n)
+		k2 = dt * self.evolve(t,x2,self.param) + np.sqrt(dt) * np.dot(np.sqrt(x1), rv_n)
 
 		x3 = x1 + a31 * k1 + a32 * k2
-		k3 = dt * self.func(t,x3,self.param) + np.sqrt(dt) * np.dot(x1, rv_n)
+		k3 = dt * self.evolve(t,x3,self.param) + np.sqrt(dt) * np.dot(np.sqrt(x1), rv_n)
 
 		x4 = x1 + a41 * k1 + a42 * k2
-		k4 = dt * self.func(t,x4,self.param) + np.sqrt(dt) * np.dot(x1, rv_n)
+		k4 = dt * self.evolve(t,x4,self.param) + np.sqrt(dt) * np.dot(np.sqrt(x1), rv_n)
 
 		return x1 + a51 * k1 + a52 * k2 + a53 * k3 + a54 * k4
 	
@@ -195,7 +212,7 @@ class SDE_integrator(object):
 		x = self.y
 		assert "y" in vars(self)
 		rv_n=np.random.randn(len(self.y))
-		return x + dt * self.func(t, x, self.param) + np.sqrt(dt) * np.dot(x, rv_n)
+		return x + dt * self.evolve(t, x, self.param) + np.sqrt(dt) * np.dot(np.sqrt(x), rv_n)
 	##}}}
 	
 def SDE(func,y0,t0=0,t1=50,dt=0.1,param=None,method='rk',**kwargs):
@@ -228,7 +245,7 @@ def SDE(func,y0,t0=0,t1=50,dt=0.1,param=None,method='rk',**kwargs):
 	while de.successful() and de.t < t1:
 		pbar = pb.ProgressBar(widgets=[pb.Percentage(), pb.Bar()], maxval=t1).start()
 		pbar.update(de.t)
-		de.integrate(de.t,dt)
+		de.integrate(de.t+dt)
 		time.append(de.t)
 		values=np.concatenate((values,np.array([de.y])),axis=0)
 
@@ -238,3 +255,18 @@ def SDE(func,y0,t0=0,t1=50,dt=0.1,param=None,method='rk',**kwargs):
 	return time,values
 	##}}}
 
+def example():
+	"""
+import cellsim
+import cellsim.sde as ode
+param=dict([('a',1),('b',1),('c',2)])
+time,values=ode.SDE(ode.test_func,[10,10,10],param=param,t0=0,t1=10,dt=0.01,method="euler")
+plt.plot(time,values[:,0],label='euler')
+time,values=ode.SDE(ode.test_func,[10,10,10],param=param,t0=0,t1=10,dt=0.01,method="rk")
+plt.plot(time,values[:,0],label='rk')
+time,values=ode.ODE(ode.test_func,[10,10,10],param=param,t0=0,t1=10,dt=0.01)
+plt.plot(time,values[:,0],label='ODE')
+plt.legend()
+plt.show()
+	"""
+	pass

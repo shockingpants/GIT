@@ -40,6 +40,23 @@ class cell(object):
 		for i in kwargs.iterkeys(): 
 			vars(self)[i]=kwargs[i]
 		##}}}
+def _update_states(self):
+		##{{{
+		"""
+		Upadtes self.states. Stores them
+		"""
+		pass
+		##}}}
+	def _check_states(self):
+		##{{{
+		"""
+		Depending on what the chemical state is, do sthg
+		"""
+		# Change to grow, quienescence, death
+		# Change from active list to inactive list
+		pass
+		##}}}
+
 	def help(self):
 		##{{{	
 		"""
@@ -117,22 +134,6 @@ class cellp(cell):
 		self._genpoly()
 		self.body.moment=pm.moment_for_poly(self.mass,self.ver, (0,0)) #Sets new inertia
 		self.box.unsafe_set_vertices(self.ver,(-self.length/2.,-self.height/2.))
-		##}}}
-	def _update_states(self):
-		##{{{
-		"""
-		Upadtes self.states. Stores them
-		"""
-		pass
-		##}}}
-	def _check_states(self):
-		##{{{
-		"""
-		Depending on what the chemical state is, do sthg
-		"""
-		# Change to grow, quienescence, death
-		# Change from active list to inactive list
-		pass
 		##}}}
 	def _check_division(self):
 		##{{{
