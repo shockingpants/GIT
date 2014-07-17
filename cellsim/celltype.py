@@ -22,7 +22,7 @@ class cell(object):
 	Every attribute of a cell will be written here.
 	Should not be called directly since it contains no shape information. Should call using subclasses
 	"""
-	def __init__(self,cellspace,num,pos,angle,**kwargs):
+	def __init__(self,cellspace,num,pos,angle,biochem=None,**kwargs):
 		##{{{
 		"""
 		pos should be a tuple (x,y)
@@ -35,28 +35,32 @@ class cell(object):
 		self.space=cellspace.space #pymunk space class
 		self.num=num #Cell id
 		## Initialize states
-		self.states=False # Let this be a class of state variables and ode to evolve it.
+		self.biochem=biochem # this should be the biochem instance. 
+		#NOTE: MAKE SURE EACH CELL REFERENCES A UNIQUE biochem instance. Creat a new instance for each cell!!!
+		biochem.assign_cell(self) # Assigns cell to biochem instance 
 		## Intialize other attributes
 		for i in kwargs.iterkeys(): 
 			vars(self)[i]=kwargs[i]
 		##}}}
-def _update_states(self):
+	def _update_states(self,dt):
 		##{{{
 		"""
 		Upadtes self.states. Stores them
 		"""
-		pass
+		if self.biochem is not None:
+			self.biochem.run(dt)
 		##}}}
 	def _check_states(self):
 		##{{{
 		"""
 		Depending on what the chemical state is, do sthg
+		Most of this will be coded from the biochem class instead.
+		In fact, it should be user defined. 
 		"""
 		# Change to grow, quienescence, death
 		# Change from active list to inactive list
 		pass
 		##}}}
-
 	def help(self):
 		##{{{	
 		"""
@@ -92,19 +96,24 @@ class cellp(cell):
 	##{{{
 	"""
 	Cell approximated by a polygon
-	1 px is 0.1um	
+	1 px is 0.25um	
 	"""
-	def __init__(self,cellspace,num,pos,angle,radius=4,length=8,vertices=6,mass=0.1,**kwargs):
+	def __init__(self,cellspace,num,pos,angle,radius=4,length=4,vertices=6,mass=0.1,**kwargs):
 		##{{{
 		## Cell Attributes
 		super(cellp, self).__init__(cellspace,num,pos,angle,**kwargs)
-		self.radius=radius #Radius of hemisphere at cell end
+		self.radius=radius #Radius of hemisphere at cell end. Radius is in uM
 		self.length=length #The length of the cell measured from the center of the two hemisphere
 		self.height=self.radius*2
 		self.vertices=vertices #Number of vertices in the hemisphere
 		self.mass=mass #Self Explanatory
 		self.color=pg.color.THECOLORS["red"]
-		self.growthrate=0.05 #Growth rate can be a function of a state variable eventually
+
+		self.growthrate=0.05 #Growth rate can be a function of a state variable eventually. um/s growth in length
+		self.divmean=2.*self.radius #Threshold for division
+		self.divstd=0.3*self.sigma
+		self.divthreshold=self.divmean+self.divstd*np.random.randn(1) #Threshold decided at the start to reduce computational cost
+
 		self.cycle='grow'
 		self.kwargs=kwargs	# This is done so that when the cell divides, any special attribute
 							# will be transfered to the daughter cell.
@@ -137,8 +146,7 @@ class cellp(cell):
 		##}}}
 	def _check_division(self):
 		##{{{
-		self.division=5*self.radius #Threshold for division
-		if self.length>self.division:
+		if self.length>self.divthreshold:
 			self.divide()
 		##}}}
 	def _genpoly(self):
@@ -182,6 +190,7 @@ class cellp(cell):
 		Move cell forward by one time step
 		3 states. grow, quie, dead
 		"""
+		self._update_states()
 		if self.cycle=='grow':
 			self.grow(dt)
 			self._check_division()
@@ -195,9 +204,6 @@ class cellp(cell):
 		"""
 		Triggered when cell is primed to divide
 		"""
-		###### Divides states into two
-		#statea,stateb=self.split_state()
-
 		###### Gets position of daughter cells
 		oldpos=self.body.position
 		a=self.box.get_vertices()[5] #top left hand corner
@@ -220,15 +226,12 @@ class cellp(cell):
 		temp.body.angular_velocity=self.body.angular_velocity
 		# TAKENOTE, MAKE SURE THERE ARE NO NEW KEYWORDS ADDED, OTHERWISE **KWARGS WILL INCREASE WITH EVERY DIVISION
 		# AND WE DON'T WANT THAT
+		
+		###### Divides states into two
+		#statea,stateb=self.split_state()
+		# This is for SDE. No Change in concentration
+		self.biochem.divide(temp)
 
-		##}}}
-	def split_state(self):
-		##{{{
-		"""
-		Splits the chemical state into 2. May add stochastics
-		"""
-		pass
-		#Return a,b
 		##}}}
 	def grow(self,dt):
 		##{{{
@@ -237,6 +240,7 @@ class cellp(cell):
 		"""
 		self.length*=1+dt*self.growthrate #Assumes exponential growth for now. TBD: Check cell doubling time
 		self._update_cell()
+		self._update_states(dt)
 		#self._check_division()
 		##}}}
 
@@ -245,7 +249,6 @@ class cellc(cell):
 	##{{{
 	"""
 	Cell approximated by a box and two circles
-	
 	"""
 	def __init__(self,cellspace,num,pos,angle,radius=4,mass=0.1,**kwargs):
 		##{{{
@@ -293,22 +296,6 @@ class cellc(cell):
 		self.left.unsafe_set_radius(self.radius)
 		self.right.unsafe_set_radius(self.radius)
 		##}}}
-	def _update_states(self):
-		##{{{
-		"""
-		Upadtes self.states. Stores them
-		"""
-		pass
-		##}}}
-	def _check_states(self):
-		##{{{
-		"""
-		Depending on what the chemical state is, do sthg
-		"""
-		# Change to grow, quienescence, death
-		# Change from active list to inactive list
-		pass
-		##}}}
 	def _check_division(self):
 		##{{{
 		self.division=5*self.radius #Threshold for division
@@ -350,7 +337,9 @@ class cellc(cell):
 		Helper function to decide what happens to the cell
 		Move cell forward by one time step
 		3 states. grow, quie, dead
+		The biochecmical processed are always running. 
 		"""
+		self._update_states(dt)
 		if self.cycle=='grow':
 			self.grow(dt)
 			self._check_division()
@@ -377,16 +366,11 @@ class cellc(cell):
 		self.body.position=pos1
 		self._update_cell()
 		#Updating New Daughter
-		self.cellspace.add_cell(cellc,pos2,self.body.angle,length=self.length,radius=self.radius) #add state next time
-
-		##}}}
-	def split_state(self):
-		##{{{
-		"""
-		Splits the chemical state into 2. May add stochastics
-		"""
-		pass
-		#Return a,b
+		temp=self.cellspace.add_cell(cellc,pos2,self.body.angle,length=self.length,radius=self.radius) #add state next time
+		###### Divides states into two
+		#statea,stateb=self.split_state()
+		# This is for SDE. No Change in concentration
+		self.biochem.divide(temp)
 		##}}}
 	def grow(self,dt):
 		##{{{
