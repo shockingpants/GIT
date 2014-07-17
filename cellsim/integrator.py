@@ -45,7 +45,6 @@ def test_osc(t,y,param=None):
 
 	##}}}
 
-
 def ODE(func,y0,t0=0,t1=50,dt=0.1,param=None,integrator='vode',int_method='Adams',**kwargs):
 	##{{{
 	"""
@@ -192,7 +191,6 @@ class SDE_integrator(object):
 		current is t
 		timestep is dt
 		"""
-		print "Applying rk"
 		a21 =   2.71644396264860
 		a31 = - 6.95653259006152
 		a32 =   0.78313689457981
@@ -233,7 +231,6 @@ class SDE_integrator(object):
 		current is t
 		timestep is dt
 		"""
-		print "Applying euler"
 		x = self.y
 		assert "y" in vars(self)
 		rv_n=np.random.randn(len(self.y))
