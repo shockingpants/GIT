@@ -37,7 +37,8 @@ class cell(object):
 		## Initialize states
 		self.biochem=biochem # this should be the biochem instance. 
 		#NOTE: MAKE SURE EACH CELL REFERENCES A UNIQUE biochem instance. Creat a new instance for each cell!!!
-		biochem.assign_cell(self) # Assigns cell to biochem instance 
+		if biochem is not None:
+			biochem.assign_cell(self) # Assigns cell to biochem instance 
 		## Intialize other attributes
 		for i in kwargs.iterkeys(): 
 			vars(self)[i]=kwargs[i]
@@ -98,7 +99,7 @@ class cellp(cell):
 	Cell approximated by a polygon
 	1 px is 0.25um	
 	"""
-	def __init__(self,cellspace,num,pos,angle,radius=4,length=4,vertices=6,mass=0.1,**kwargs):
+	def __init__(self,cellspace,num,pos,angle,radius=4,length=8,vertices=6,mass=0.1,biochem=None,**kwargs):
 		##{{{
 		## Cell Attributes
 		super(cellp, self).__init__(cellspace,num,pos,angle,**kwargs)
@@ -111,7 +112,7 @@ class cellp(cell):
 
 		self.growthrate=0.05 #Growth rate can be a function of a state variable eventually. um/s growth in length
 		self.divmean=2.*self.radius #Threshold for division
-		self.divstd=0.3*self.sigma
+		self.divstd=0.3*self.divmean
 		self.divthreshold=self.divmean+self.divstd*np.random.randn(1) #Threshold decided at the start to reduce computational cost
 
 		self.cycle='grow'
@@ -190,7 +191,7 @@ class cellp(cell):
 		Move cell forward by one time step
 		3 states. grow, quie, dead
 		"""
-		self._update_states()
+		self._update_states(dt)
 		if self.cycle=='grow':
 			self.grow(dt)
 			self._check_division()
@@ -214,8 +215,8 @@ class cellp(cell):
 		ab=b-a
 
 		ran=np.random.randn()*0.05**2
-		pos1=(a+ad*0.5*(0.5-(self.radius/self.length))+(ab/2.0))*(1+ran) #a+ad direction+ab direction
-		pos2=(d-ad*0.5*(0.5-(self.radius/self.length))+(ab/2.0))*(1-ran)
+		pos1=(a+ad*0.5*(0.5-(self.radius/self.length))+(ab/2.0))#*(1+ran) #a+ad direction+ab direction
+		pos2=(d-ad*0.5*(0.5-(self.radius/self.length))+(ab/2.0))#*(1-ran)
 		#Update Primary Daughter
 		self.length=(self.length/2.0-self.radius)
 		self.body.position=pos1
@@ -230,7 +231,8 @@ class cellp(cell):
 		###### Divides states into two
 		#statea,stateb=self.split_state()
 		# This is for SDE. No Change in concentration
-		self.biochem.divide(temp)
+		if self.biochem is not None:
+			self.biochem.divide(temp)
 
 		##}}}
 	def grow(self,dt):
