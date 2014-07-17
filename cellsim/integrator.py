@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import progressbar as pb
 import __main__
+import math
 
 def test_func(t,y,param):
 	##{{{
@@ -27,6 +28,23 @@ def test_func(t,y,param):
 
 	return np.array([dy1dt,dy2dt,dy3dt])
 	##}}}
+
+def test_osc(t,y,param=None):
+	##{{{
+	"""
+	"""
+	c,i=y
+	
+	p=param
+	beta=p['beta']
+	kappa=p['kappa']
+
+	dcdt=c**2/(beta*i**2+c**2)-c
+	didt=kappa*(c-i)
+	return np.array([dcdt,didt])
+
+	##}}}
+
 
 def ODE(func,y0,t0=0,t1=50,dt=0.1,param=None,integrator='vode',int_method='Adams',**kwargs):
 	##{{{
@@ -97,16 +115,23 @@ def ODE1(fun,y0,t0=0,t1=10,dt=0.01,param=None):
 
 class SDE_integrator(object):
 	##{{{
-	def __init__(self,func,method="euler"):
+	def __init__(self,func,vol=None,method="euler"):
 		"""
+		Applies Chemical Langevin Equation
 		func is a list of functions for integration
 		func should require 2 or 3 parameters --> func(t,y,param) where kwargs are the param
 		method is the type of integration
+		vol is the cell volume, used to modulate the noise
 		"""
 		self.func=func
 		self.method=method
 		self.success=True #Checks the success of integration. Based on rel and abs err
 		self.param=None
+		if vol is None: # Vol in L
+			self.vol=3.14*1e-15  #1/(Na*V)  Vol of bacteria 3.14fL
+		else:
+			self.vol=vol
+		self.volnorm=np.sqrt(1./6e23/self.vol) # Normalization of noise based on volume
 
 	def set_initial_value(self,y0,t0):
 		"""
@@ -136,10 +161,10 @@ class SDE_integrator(object):
 		"""
 		dt=new_t-self.t
 		if self.method=="rk":
-			self.y = self.rk(t,dt)
+			self.y = self.rk(self.t,dt)
 			self.t = new_t
 		elif self.method=="euler":
-			self.y = self.euler(t,dt)
+			self.y = self.euler(self.t,dt)
 			self.t = new_t
 		else:
 			raise Exception("Unknown Method")
@@ -187,17 +212,17 @@ class SDE_integrator(object):
 		assert "y" in vars(self)
 		rv_n=np.random.randn(len(self.y))
 		x1 = self.y
-		k1 = dt * self.evolve(t,x1,self.param) + np.sqrt(dt) * np.dot(np.sqrt(x1), rv_n)
+		k1 = dt * self.evolve(t,x1,self.param) + np.sqrt(dt) * self.volnorm * np.dot(np.sqrt(x1), rv_n)
 		#Make sure output of func is np.array
 
 		x2 = x1 + a21 * k1
-		k2 = dt * self.evolve(t,x2,self.param) + np.sqrt(dt) * np.dot(np.sqrt(x1), rv_n)
+		k2 = dt * self.evolve(t,x2,self.param) + np.sqrt(dt) * self.volnorm * np.dot(np.sqrt(x1), rv_n)
 
 		x3 = x1 + a31 * k1 + a32 * k2
-		k3 = dt * self.evolve(t,x3,self.param) + np.sqrt(dt) * np.dot(np.sqrt(x1), rv_n)
+		k3 = dt * self.evolve(t,x3,self.param) + np.sqrt(dt) * self.volnorm * np.dot(np.sqrt(x1), rv_n)
 
 		x4 = x1 + a41 * k1 + a42 * k2
-		k4 = dt * self.evolve(t,x4,self.param) + np.sqrt(dt) * np.dot(np.sqrt(x1), rv_n)
+		k4 = dt * self.evolve(t,x4,self.param) + np.sqrt(dt) * self.volnorm * np.dot(np.sqrt(x1), rv_n)
 
 		return x1 + a51 * k1 + a52 * k2 + a53 * k3 + a54 * k4
 	
@@ -212,10 +237,10 @@ class SDE_integrator(object):
 		x = self.y
 		assert "y" in vars(self)
 		rv_n=np.random.randn(len(self.y))
-		return x + dt * self.evolve(t, x, self.param) + np.sqrt(dt) * np.dot(np.sqrt(x), rv_n)
+		return x + dt * self.evolve(t, x, self.param) + np.sqrt(dt) * self.volnorm * np.dot(np.sqrt(x), rv_n)
 	##}}}
 	
-def SDE(func,y0,t0=0,t1=50,dt=0.1,param=None,method='rk',**kwargs):
+def SDE(func,y0,t0=0,t1=50,dt=0.1,param=None,vol=None,method='rk',**kwargs):
 	##{{{
 	"""
 	####------ARGUMENTS-----------
@@ -234,7 +259,7 @@ def SDE(func,y0,t0=0,t1=50,dt=0.1,param=None,method='rk',**kwargs):
 	(Use 'for i in values' to extract values for each individual variable)
 	"""
 	# Set up
-	de=SDE_integrator(func,method=method)
+	de=SDE_integrator(func,method=method,vol=vol)
 	de.set_initial_value(y0,t0) #Adds parameter
 	de.set_parameters(param)
 		
@@ -258,14 +283,32 @@ def SDE(func,y0,t0=0,t1=50,dt=0.1,param=None,method='rk',**kwargs):
 def example():
 	"""
 import cellsim
-import cellsim.sde as ode
+import cellsim.integrator as ode
 param=dict([('a',1),('b',1),('c',2)])
-time,values=ode.SDE(ode.test_func,[10,10,10],param=param,t0=0,t1=10,dt=0.01,method="euler")
+time,values=ode.SDE(ode.test_func,[0.5,0.5,0.5],param=param,vol=1e-21,t0=0,t1=10,dt=0.01,method="euler")
 plt.plot(time,values[:,0],label='euler')
-time,values=ode.SDE(ode.test_func,[10,10,10],param=param,t0=0,t1=10,dt=0.01,method="rk")
+time,values=ode.SDE(ode.test_func,[0.5,0.5,0.5],param=param,vol=1e-21,t0=0,t1=10,dt=0.01,method="rk")
 plt.plot(time,values[:,0],label='rk')
-time,values=ode.ODE(ode.test_func,[10,10,10],param=param,t0=0,t1=10,dt=0.01)
+time,values=ode.ODE(ode.test_func,[0.5,0.5,0.5],param=param,t0=0,t1=10,dt=0.01)
 plt.plot(time,values[:,0],label='ODE')
+plt.legend()
+param=dict([("beta",4),("kappa",0.5)])
+time,values=ode.SDE(ode.test_osc,[0.4,0.4],param=param,vol=1e-21,t0=0,t1=100,dt=0.01,method="euler")
+plt.figure(2)
+plt.plot(time,values[:,0],label='euler')
+plt.figure(3)
+plt.plot(values[:,0],values[:,1],label="euler")
+time,values=ode.SDE(ode.test_osc,[0.4,0.4],param=param,vol=1e-21,t0=0,t1=100,dt=0.01,method="rk")
+plt.figure(2)
+plt.plot(time,values[:,0],label='rk')
+plt.figure(3)
+plt.plot(values[:,0],values[:,1],label="rk")
+time,values=ode.ODE(ode.test_osc,[0.4,0.4],param=param,t0=0,t1=100,dt=0.01)
+plt.figure(2)
+plt.plot(time,values[:,0],label='ODE')
+plt.legend()
+plt.figure(3)
+plt.plot(values[:,0],values[:,1],label="ODE")
 plt.legend()
 plt.show()
 	"""

@@ -43,13 +43,13 @@ class cellspace(object):
 		self.count=0
 		self.solspace=solspace(self)
 		###### Viewer
+		self.play=True #Variable specifying state
+		self.pause=False
 		if self.view:
 			self.viewer=cellviewer(self) #This handles everything to do with viewing
-			self.play=True #Variable specifying state
-			self.pause=False
-
+			
 		##}}}	
-	def add_cell(self,celltype,pos,angle=0,**kwargs):
+	def add_cell(self,celltyp,pos,biochem=None,angle=0,**kwargs):
 		##{{{	
 		"""
 		Add cells to the space
@@ -58,15 +58,16 @@ class cellspace(object):
 		Arguments specific to the cell type will be entered via kwargs
 		TBD Need to change cell division in such a way that when the cell divides, certain new cell properties are maintained.
 		""" 
-		assert issubclass(celltype, cell)
+		assert issubclass(celltyp, cell)
 		num=self.count
-		self.active_cells[num]=celltype(self,num,pos,angle,**kwargs)
+		self.active_cells[num]=celltyp(self,num,pos,angle,biochem=biochem,**kwargs)
 		self.count+=1
 		return self.active_cells[num]
 		##}}}
 	def run(self):
 		##{{{
 		counter=0
+		
 		while self.play:
 			if not self.pause:
 				## Active Cell List	
@@ -90,7 +91,8 @@ class cellspace(object):
 				if self.view:
 					self.viewer.plot()
 			else:
-				self.viewer.plot()
+				if self.view:
+					self.viewer.plot()
 			##}}}
 	##}}}
 class solspace(object):
