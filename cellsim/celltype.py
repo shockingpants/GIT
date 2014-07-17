@@ -99,20 +99,20 @@ class cellp(cell):
 	Cell approximated by a polygon
 	1 px is 0.25um	
 	"""
-	def __init__(self,cellspace,num,pos,angle,radius=4,length=8,vertices=6,mass=0.1,biochem=None,**kwargs):
+	def __init__(self,cellspace,num,pos,angle,radius=5,length=None,vertices=6,mass=0.1,biochem=None,**kwargs):
 		##{{{
 		## Cell Attributes
-		super(cellp, self).__init__(cellspace,num,pos,angle,**kwargs)
+		super(cellp, self).__init__(cellspace,num,pos,angle,biochem=biochem,**kwargs)
 		self.radius=radius #Radius of hemisphere at cell end. Radius is in uM
-		self.length=length #The length of the cell measured from the center of the two hemisphere
+		self.length=radius*2 if length is None else length #The length of the cell measured from the center of the two hemisphere
 		self.height=self.radius*2
 		self.vertices=vertices #Number of vertices in the hemisphere
 		self.mass=mass #Self Explanatory
 		self.color=pg.color.THECOLORS["red"]
 
-		self.growthrate=0.05 #Growth rate can be a function of a state variable eventually. um/s growth in length
-		self.divmean=2.*self.radius #Threshold for division
-		self.divstd=0.3*self.divmean
+		self.growthrate=0.03 #Growth rate can be a function of a state variable eventually. um/s growth in length
+		self.divmean=4.*self.radius #Threshold for division
+		self.divstd=0.1*self.divmean
 		self.divthreshold=self.divmean+self.divstd*np.random.randn(1) #Threshold decided at the start to reduce computational cost
 
 		self.cycle='grow'
@@ -192,7 +192,7 @@ class cellp(cell):
 		3 states. grow, quie, dead
 		"""
 		self._update_states(dt)
-		if self.cycle=='grow':
+		if self.cycle=='grow':	
 			self.grow(dt)
 			self._check_division()
 		elif self.cycle=='quie':
@@ -205,6 +205,13 @@ class cellp(cell):
 		"""
 		Triggered when cell is primed to divide
 		"""
+		###### Divides states into two
+		#statea,stateb=self.split_state()
+		# This is for SDE. No Change in concentration
+		if self.biochem is not None:
+			bc=self.biochem.divide()
+		else:
+			bc=None
 		###### Gets position of daughter cells
 		oldpos=self.body.position
 		a=self.box.get_vertices()[5] #top left hand corner
@@ -222,17 +229,13 @@ class cellp(cell):
 		self.body.position=pos1
 		self._update_cell()
 		#Updating New Daughter
-		temp=self.cellspace.add_cell(cellp,pos2,self.body.angle,length=self.length,radius=self.radius,**self.kwargs) #TBDadd state next time
+		self.kwargs
+		temp=self.cellspace.add_cell(cellp,pos2,self.body.angle,length=self.length,radius=self.radius,biochem=bc,**self.kwargs) #TBDadd state next time
 		temp.body.velocity=self.body.velocity
 		temp.body.angular_velocity=self.body.angular_velocity
+		temp.color=self.color
 		# TAKENOTE, MAKE SURE THERE ARE NO NEW KEYWORDS ADDED, OTHERWISE **KWARGS WILL INCREASE WITH EVERY DIVISION
-		# AND WE DON'T WANT THAT
-		
-		###### Divides states into two
-		#statea,stateb=self.split_state()
-		# This is for SDE. No Change in concentration
-		if self.biochem is not None:
-			self.biochem.divide(temp)
+		# AND WE DON'T WANT THAT	
 
 		##}}}
 	def grow(self,dt):
@@ -242,8 +245,6 @@ class cellp(cell):
 		"""
 		self.length*=1+dt*self.growthrate #Assumes exponential growth for now. TBD: Check cell doubling time
 		self._update_cell()
-		self._update_states(dt)
-		#self._check_division()
 		##}}}
 
 	##}}}
@@ -366,13 +367,13 @@ class cellc(cell):
 		#Update Primary Daughter
 		self.length=(self.length/2.0-self.radius)
 		self.body.position=pos1
-		self._update_cell()
+		#self._update_cell()
 		#Updating New Daughter
 		temp=self.cellspace.add_cell(cellc,pos2,self.body.angle,length=self.length,radius=self.radius) #add state next time
 		###### Divides states into two
 		#statea,stateb=self.split_state()
 		# This is for SDE. No Change in concentration
-		self.biochem.divide(temp)
+		#self.biochem.divide(temp)
 		##}}}
 	def grow(self,dt):
 		##{{{

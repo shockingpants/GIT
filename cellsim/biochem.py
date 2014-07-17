@@ -85,6 +85,8 @@ class biochemistry(object):
 			de.integrate(de.t+dt)
 			self.time.append(de.t)
 			self.values=np.concatenate((self.values,np.array([de.y])),axis=0)
+			if len(self.time) != len(self.values):
+				raise Exception("Sthg wrong")
 		else:
 			print de.successful()
 		##}}}
@@ -108,7 +110,7 @@ class biochemistry(object):
 		pass
 		##}}}
 
-	def reporter(self,ind,color="#FF0000",fmin=0,fmax=20):
+	def reporter(self,ind,color="#FF0000",fmin=0,fmax=1):
 		##{{{
 		"""
 		Change cell color based on protein concentration
@@ -140,11 +142,11 @@ class biochemistry(object):
 		if "reportercolor" in vars(self):
 			ratio=(self.values[-1,self.ind]-self.fmin)/(self.fmax-self.fmin)
 			if ratio < 0.0:
-				self.color=(255,255,255)
+				self.cell.color=(255,255,255)
 			elif ratio > 1.0:
-				self.color=self.reportercolor
+				self.cell.color=self.reportercolor
 			else:
-				self.color=self.reportercolor+ratio*(np.array((255,255,255))-np.array(self.reportercolor))
+				self.cell.color=np.array((255,255,255))-ratio*(np.array((255,255,255))-np.array(self.reportercolor))
 		else:
 			pass
 
@@ -160,12 +162,11 @@ class biochemistry(object):
 		self.updatecells(dt)
 		##}}}
 	
-	def divide(self,cell):
+	def divide(self):
 		##{{{
 		"""
 		https://docs.python.org/2/library/copy.html
 		"""
-		cell.biochem=copy(self)
-		cell.biochem.assign_cell(cell)
+		return copy.copy(self)
 		##}}}
 		

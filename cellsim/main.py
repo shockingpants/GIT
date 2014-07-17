@@ -49,7 +49,7 @@ class cellspace(object):
 			self.viewer=cellviewer(self) #This handles everything to do with viewing
 			
 		##}}}	
-	def add_cell(self,celltyp,pos,biochem=None,angle=0,**kwargs):
+	def add_cell(self,celltyp,pos,angle=0,biochem=None,**kwargs):
 		##{{{	
 		"""
 		Add cells to the space
