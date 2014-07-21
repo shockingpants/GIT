@@ -110,7 +110,7 @@ class cellp(cell):
 		self.mass=mass #Self Explanatory
 		self.color=pg.color.THECOLORS["red"]
 
-		self.growthrate=0.03 #Growth rate can be a function of a state variable eventually. um/s growth in length
+		self.growthrate=0.05 #Growth rate can be a function of a state variable eventually. um/s growth in length
 		self.divmean=4.*self.radius #Threshold for division
 		self.divstd=0.1*self.divmean
 		self.divthreshold=self.divmean+self.divstd*np.random.randn(1) #Threshold decided at the start to reduce computational cost
@@ -138,7 +138,7 @@ class cellp(cell):
 	def	_update_cell(self):
 		##{{{
 		"""
-		Updates Inertia, Updates length, height etc.
+		Updates Inertia, Updates length, height etc for pygame
 		Does not update position.
 		"""
 		self._genpoly()

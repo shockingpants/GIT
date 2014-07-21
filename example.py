@@ -20,10 +20,11 @@ def test_osc(t,y,param=None):
 	##}}}
 param=dict([("beta",4),("kappa",0.5)])
 space=cs.cellspace(dt=0.05)
-bc1=cs.biochemistry(test_osc,y0=[2,2],vol=1e-21,param=param, integrator="SDE",method="rk")
+names=['c','i']
+bc1=cs.biochemistry(test_osc,names,y0=[2,2],vol=1e-22,param=param, integrator="SDE",method="rk")
 #bc1.reporter('x',color=) Implement symbolic py for this
 bc1.reporter(1,color="#00ff00")
-b=space.add_cell(cs.cellp,(300,300),radius=4,mass=0.01,biochem=bc1)
+b=space.add_cell(cs.cellp,(300,300),radius=4,length=15,mass=0.01,biochem=bc1)
 #bc1=cs.biochem(test_osc,y0,vol=1e-21,param=param, integrator="SDE",method="rk")
 #c=space.add_cell(cs.cellp,(200,300),radius=4,mass=0.01,biochem=bc1)
 space.solspace.add_species('sig1',degradation=1, diffusion=10)
