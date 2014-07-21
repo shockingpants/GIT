@@ -10,6 +10,7 @@ import numpy as np
 import pymunk as pm
 import fipy as fp
 import fipy.tools.numerix as fnumerix
+#fipy, by national institute of standards and technology
 from celltype import *
 from viewer import *
 import time
@@ -43,13 +44,13 @@ class cellspace(object):
 		self.count=0
 		self.solspace=solspace(self)
 		###### Viewer
+		self.play=True #Variable specifying state
+		self.pause=False
 		if self.view:
 			self.viewer=cellviewer(self) #This handles everything to do with viewing
-			self.play=True #Variable specifying state
-			self.pause=False
-
+			
 		##}}}	
-	def add_cell(self,celltype,pos,angle=0,**kwargs):
+	def add_cell(self,celltyp,pos,angle=0,biochem=None,**kwargs):
 		##{{{	
 		"""
 		Add cells to the space
@@ -58,15 +59,19 @@ class cellspace(object):
 		Arguments specific to the cell type will be entered via kwargs
 		TBD Need to change cell division in such a way that when the cell divides, certain new cell properties are maintained.
 		""" 
-		assert issubclass(celltype, cell)
+		assert issubclass(celltyp, cell)
 		num=self.count
-		self.active_cells[num]=celltype(self,num,pos,angle,**kwargs)
+		self.active_cells[num]=celltyp(self,num,pos,angle,biochem=biochem,**kwargs)
 		self.count+=1
 		return self.active_cells[num]
 		##}}}
-	def run(self):
+	def run(self,dt=None):
+		"""
+		if dt is none, use default dt
+		"""
 		##{{{
 		counter=0
+		dt=self.dt if dt is None else dt
 		while self.play:
 			if not self.pause:
 				## Active Cell List	
@@ -90,7 +95,11 @@ class cellspace(object):
 				if self.view:
 					self.viewer.plot()
 			else:
-				self.viewer.plot()
+				if self.view:
+					self.viewer.plot()
+
+			activecells=list(self.active_cells.itervalues())
+			
 			##}}}
 	##}}}
 class solspace(object):
@@ -134,7 +143,6 @@ class solspace(object):
 		for spec in self.species.itervalues():
 			spec.eq.solve(var=spec,dt=self.cellspace.dt)
 			spec.setValue(spec+0.2, where=self.mask) # This is just a test code.
-			#self.viewer.plot() #WIll plot depending on tick
 		##}}}
 	def _get_position(self):
 		##{{{
@@ -151,7 +159,32 @@ class solspace(object):
 		#ID=self.mesh._getNearestCellID(solpos)
 		ID=self.mesh._getNearestCellID(oldpos)
 		self.mask=np.zeros(self.meshnum)
-		self.mask[ID]=1 #This is the actual mask of 1s and 0s, Can replace with True and False	
+		self.pos_ID=ID
+		self.mask[ID]=1 #This is the actual mask of 1s and 0s, Can replace with True and False
+		return ID
+		##}}}
+
+	def _exchange(self):
+		##{{{
+		"""
+		Goes through all the cells to get values and exchange it with solution
+		#same loop in _get_position and _exchange. Anyway to combine them pythonically? Will it speed up efficiency
+		"""
+		#Get cell values
+		int_val={} #Interior value
+		for spec in self.species.itervalues():
+			int_value[spec.name]=[]
+		for cell in self.cellspace.active_cells.itervalues(): #Retrieves cells
+			for spec in self.species.itervalues():
+				int_value[spec.name].append(cell.biochem.get_latest(spec.name))	
+
+		#Get solspace values
+		ext_val={}
+		assert "pos_ID" in vars(self) # Make sure to run _get_position before _exchange to generate ID
+		for spec in self.species.itervalues():
+			ext_value[spec.name]=spec.value[]
+			spec.setValue(spec+0.2, where=self.mask)
+
 		##}}}
 	def add_species(self,name,degradation,diffusion,value=0.,**kwargs):
 		##{{{
