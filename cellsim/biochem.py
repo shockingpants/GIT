@@ -157,11 +157,7 @@ class biochemistry(object):
 		Update color of cell based on reporter
 		"""
 		if "reportercolor" in vars(self):
-<<<<<<< HEAD
-			ratio=(self.values[-1,self.ind]-self.fmin)/(self.fmax-self.fmin)
-=======
 			ratio=(self.de.y[self.ind]-self.fmin)/(self.fmax-self.fmin)
->>>>>>> Macpro
 			if ratio < 0.0:
 				self.cell.color=(255,255,255)
 			elif ratio > 1.0:

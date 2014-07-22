@@ -153,14 +153,7 @@ class solspace(object):
 		self.mask=self.mask>0
 		return ID
 		##}}}
-<<<<<<< HEAD
-<<<<<<< HEAD
-	def add_species(self,name,degradation,diffusion,value=0.,**kwargs):
-=======
-	def _exchange(self):
-=======
 	def _old_exchange(self):
->>>>>>> Macpro
 		##{{{
 		"""
 		Goes through all the cells to get values and exchange it with solution
@@ -247,7 +240,6 @@ class solspace(object):
 			#spec.setValue(spec+0.2, where=self.mask) # This is just a test code.
 		##}}}
 	def add_species(self,name,degradation,diffusion,kin,kout,value=0.,**kwargs):
->>>>>>> FETCH_HEAD
 		##{{{
 		"""
 		Add class signal species
