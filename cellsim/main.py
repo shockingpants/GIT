@@ -161,17 +161,23 @@ class solspace(object):
 		self.mask=np.zeros(self.meshnum)
 		self.pos_ID=ID
 		self.mask[ID]=1 #This is the actual mask of 1s and 0s, Can replace with True and False
+		self.mask=self.mask<0
 		return ID
 		##}}}
-
 	def _exchange(self):
 		##{{{
 		"""
 		Goes through all the cells to get values and exchange it with solution
-		#same loop in _get_position and _exchange. Anyway to combine them pythonically? Will it speed up efficiency
+		same loop in _get_position and _exchange. Any way to combine them pythonically? Will it speed up efficiency		
+		solspace controls the exchange
+		Assumes
+		1) All cells exchange with the same kin and kout for a specific species of signaling mol
 		"""
+		dt=self.cellspace.dt
 		#Get cell values
 		int_val={} #Interior value
+		kin={}
+		kout={}
 		for spec in self.species.itervalues():
 			int_value[spec.name]=[]
 		for cell in self.cellspace.active_cells.itervalues(): #Retrieves cells
@@ -182,11 +188,21 @@ class solspace(object):
 		ext_val={}
 		assert "pos_ID" in vars(self) # Make sure to run _get_position before _exchange to generate ID
 		for spec in self.species.itervalues():
-			ext_value[spec.name]=spec.value[]
-			spec.setValue(spec+0.2, where=self.mask)
+			ext_value[spec.name]=spec.value[self.mask]
+
+		#Actual exchange
+		for spec in self.species.itervalues():
+			kin=spec.kin
+			kout=spec.kout
+			dext_dt=kout*int_val[spec.name]-kin*ext_val[spec.name]
+			int_val[spec.name]=-dext_dt*dt
+			ext_val[spec.name]=dext_dt*dt
+
+
+
 
 		##}}}
-	def add_species(self,name,degradation,diffusion,value=0.,**kwargs):
+	def add_species(self,name,degradation,diffusion,kin,kout,value=0.,**kwargs):
 		##{{{
 		"""
 		Add class signal species
@@ -200,7 +216,7 @@ class solspace(object):
 		datamax = 1.0  --> highest value
 		color = "0000FF" --> color representing that species.
 		"""
-		newspecies=signal_species(name,self.mesh,degradation,diffusion,value,**kwargs)
+		newspecies=signal_species(name,self.mesh,degradation,diffusion,kin,kout,value,**kwargs)
 		newspecies.eq=fp.TransientTerm() == fp.DiffusionTerm(coeff=newspecies.diffusion)
 		self.species[name]=newspecies #This a dictionary that keeps track of species.
 
@@ -217,6 +233,7 @@ class solspace(object):
 		"""
 		self._get_position()
 		self._update_interface()
+		self._exchange()
 
 		
 		##}}}
@@ -250,14 +267,17 @@ class signal_species(fp.CellVariable):
 	##{{{
 	"""
 	Create a new subclass using fp.CellVariable
+	value is the initial value
 	"""
-	def __init__(self, name, mesh, degradation ,diffusion, value=0., **kwargs):
+	def __init__(self, name, mesh, degradation ,diffusion, kin, kout, value=0., **kwargs):
 		##{{{
 		super(signal_species, self).__init__(name=name, mesh=mesh, value=value)
 		self.degradation=degradation
 		self.diffusion=diffusion
 		self.name=name
 		self.kwargs=kwargs
+		self.kin=kin
+		self.kout=kout
 		##}}}
 	##}}}
 class GUI(object):
