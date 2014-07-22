@@ -100,10 +100,10 @@ class biochemistry(object):
 		de=self.de
 		if de.successful():
 			de.integrate(de.t+dt)
-			#self.time.append(de.t)
-			#self.values=np.concatenate((self.values,np.array([de.y])),axis=0)
-			self.time=de.t
-			self.values=de.y
+			self.time.append(de.t)
+			self.values=np.concatenate((self.values,np.array([de.y])),axis=0)
+			#self.time=de.t
+			#self.values=de.y
 		else:
 			print de.successful()
 		##}}}
@@ -157,7 +157,7 @@ class biochemistry(object):
 		Update color of cell based on reporter
 		"""
 		if "reportercolor" in vars(self):
-			ratio=(self.de.y[-1,self.ind]-self.fmin)/(self.fmax-self.fmin)
+			ratio=(self.values[-1,self.ind]-self.fmin)/(self.fmax-self.fmin)
 			if ratio < 0.0:
 				self.cell.color=(255,255,255)
 			elif ratio > 1.0:

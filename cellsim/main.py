@@ -163,29 +163,6 @@ class solspace(object):
 		self.mask[ID]=1 #This is the actual mask of 1s and 0s, Can replace with True and False
 		return ID
 		##}}}
-
-	def _exchange(self):
-		##{{{
-		"""
-		Goes through all the cells to get values and exchange it with solution
-		#same loop in _get_position and _exchange. Anyway to combine them pythonically? Will it speed up efficiency
-		"""
-		#Get cell values
-		int_val={} #Interior value
-		for spec in self.species.itervalues():
-			int_value[spec.name]=[]
-		for cell in self.cellspace.active_cells.itervalues(): #Retrieves cells
-			for spec in self.species.itervalues():
-				int_value[spec.name].append(cell.biochem.get_latest(spec.name))	
-
-		#Get solspace values
-		ext_val={}
-		assert "pos_ID" in vars(self) # Make sure to run _get_position before _exchange to generate ID
-		for spec in self.species.itervalues():
-			ext_value[spec.name]=spec.value[]
-			spec.setValue(spec+0.2, where=self.mask)
-
-		##}}}
 	def add_species(self,name,degradation,diffusion,value=0.,**kwargs):
 		##{{{
 		"""
