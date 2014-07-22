@@ -5,8 +5,6 @@ import numpy as np
 import os
 import datafitting as df
 import sys
-import matplotlib.pyplot as plt
-import matplotlib
 import progressbar as pb
 import __main__
 import math
@@ -84,32 +82,6 @@ def ODE(func,y0,t0=0,t1=50,dt=0.1,param=None,integrator='vode',int_method='Adams
 	pbar.finish()
   	#values=zip(*values) #Note this may be a slow step	
 	return time,values
-	##}}}
-
-def ODE1(fun,y0,t0=0,t1=10,dt=0.01,param=None):
-	##{{{
-	"""
-	quick ODE for one equation that plots data
-	fun is a function for dydt. f=f(y)  
-	fun should not have any t dependence
-	----Usage----
-	ODE1(fun,0)
-	"""
-	def func(t,y,param):
-		y1,=y
-		dydt=fun(y1)
-		return dydt
-		
-	time,results=ODE(func,y0,t0=t0,t1=t1,dt=dt)	
-	plt.ion()
-	plt.figure()
-	plt.plot(time,results[0],label='y')
-	#plt.plot(time,fun(results[0]),label='rate')
-	plt.xlabel('time')
-	plt.ylabel('y')
-	plt.legend()
-
-	return time,results[0]
 	##}}}
 
 class SDE_integrator(object):
