@@ -6,3 +6,5 @@ cellsim/pygame_draw.pyc
 *.swp
 
 *.swp
+
+*.pyc
