@@ -2,3 +2,9 @@
 cellsim/__init__.pyc
 
 cellsim/pygame_draw.pyc
+
+*.swp
+
+*.swp
+
+*.pyc
