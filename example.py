@@ -27,8 +27,8 @@ bc1.reporter(1,color="#00ff00")
 b=space.add_cell(cs.cellp,(300,300),radius=4,length=15,mass=0.01,biochem=bc1)
 #bc1=cs.biochem(test_osc,y0,vol=1e-21,param=param, integrator="SDE",method="rk")
 #c=space.add_cell(cs.cellp,(200,300),radius=4,mass=0.01,biochem=bc1)
-space.solspace.add_species('sig1',degradation=1, diffusion=10, kin=1, kout=1)
-space.solspace.add_species('sig2',degradation=1, diffusion=1, kin=1, kout=1, color="#FF0000")
+space.solspace.add_species('c',degradation=1, diffusion=10, kin=1, kout=1,datamax=0.1)
+space.solspace.add_species('i',degradation=1, diffusion=1, kin=1, kout=1, color="#FF0000",datamax=0.1)
 space.run()
 
 

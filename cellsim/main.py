@@ -133,17 +133,6 @@ class solspace(object):
 		self.species={} #dictionary of signal_species
 		#self.viewer=_solviewer(self) #class responsible for all viewing
 		##}}}
-	def _update_interface(self):
-		##{{{
-		"""
-		Changes the mesh CellVariable value based on position of cells and the rate of exchange.
-		TDB: Write a more elegant solution that can be changed from a master script, not from the 
-		__init__.py code.
-		"""
-		for spec in self.species.itervalues():
-			spec.eq.solve(var=spec,dt=self.cellspace.dt)
-			spec.setValue(spec+0.2, where=self.mask) # This is just a test code.
-		##}}}
 	def _get_position(self):
 		##{{{
 		"""
@@ -161,17 +150,19 @@ class solspace(object):
 		self.mask=np.zeros(self.meshnum)
 		self.pos_ID=ID
 		self.mask[ID]=1 #This is the actual mask of 1s and 0s, Can replace with True and False
-		self.mask=self.mask<0
+		self.mask=self.mask>0
 		return ID
 		##}}}
-	def _exchange(self):
+	def _old_exchange(self):
 		##{{{
 		"""
 		Goes through all the cells to get values and exchange it with solution
-		same loop in _get_position and _exchange. Any way to combine them pythonically? Will it speed up efficiency		
 		solspace controls the exchange
-		Assumes
+		Assumption
 		1) All cells exchange with the same kin and kout for a specific species of signaling mol
+		Optimization
+		1) same loop in _get_position and _exchange. Any way to combine them pythonically? 
+		2) Too many loops, anyway to speed this up?
 		"""
 		dt=self.cellspace.dt
 		#Get cell values
@@ -179,28 +170,74 @@ class solspace(object):
 		kin={}
 		kout={}
 		for spec in self.species.itervalues():
-			int_value[spec.name]=[]
+			int_val[spec.name]=[]
 		for cell in self.cellspace.active_cells.itervalues(): #Retrieves cells
 			for spec in self.species.itervalues():
-				int_value[spec.name].append(cell.biochem.get_latest(spec.name))	
+				int_val[spec.name].append(cell.biochem.get_latest(spec.name))	
 
 		#Get solspace values
 		ext_val={}
 		assert "pos_ID" in vars(self) # Make sure to run _get_position before _exchange to generate ID
 		for spec in self.species.itervalues():
-			ext_value[spec.name]=spec.value[self.mask]
+			ext_val[spec.name]=spec.value[self.mask]
 
 		#Actual exchange
 		for spec in self.species.itervalues():
 			kin=spec.kin
 			kout=spec.kout
-			dext_dt=kout*int_val[spec.name]-kin*ext_val[spec.name]
-			int_val[spec.name]=-dext_dt*dt
-			ext_val[spec.name]=dext_dt*dt
+			dext_dt=kout*np.array(int_val[spec.name])-kin*np.array(ext_val[spec.name])
+			int_val[spec.name]-=dext_dt*dt
+			ext_val[spec.name]+=dext_dt*dt
+			#Update
+			spec.setValue(ext_val[spec.name], where=self.mask)
+			for ind,cell in enumerate(self.cellspace.active_cells.itervalues()):
+				cell.biochem.set_latest(spec.name,int_val[spec.name][ind])
+		##}}}
+	def _exchange(self):
+		##{{{
+		"""
+		Goes through all the cells to get values and exchange it with solution
+		solspace controls the exchange
+		Assumption
+		1) All cells exchange with the same kin and kout for a specific species of signaling mol
+		Optimization
+		1) same loop in _get_position and _exchange. Any way to combine them pythonically? 
+		2) Too many loops, anyway to speed this up?
+		"""
+		dt=self.cellspace.dt
 
-
-
-
+		for cell in self.cellspace.active_cells.itervalues(): #Retrieves cells
+			oldpos=([],[])
+			x,y=cell.get_pos()
+			oldpos[0].append(x*self.cellspace.dx)
+			oldpos[1].append(y*self.cellspace.dy)
+			ID=self.mesh._getNearestCellID(oldpos)
+			mask=np.zeros(self.meshnum)
+			mask[ID]=1 #This is the actual mask of 1s and 0s, Can replace with True and False
+			for spec in self.species.itervalues():
+				#Get Value
+				int_val=cell.biochem.get_latest(spec.name)
+				ext_val=spec.value[ID]
+				kin=spec.kin
+				kout=spec.kout
+				#Change
+				dext_dt=kout*int_val-kin*ext_val
+				int_val-=dext_dt*dt
+				ext_val+=dext_dt*dt
+				#Update VAlue
+				cell.biochem.set_latest(spec.name,int_val)
+				spec.setValue(ext_val, where=mask)
+		##}}}
+	def _update_interface(self):
+		##{{{
+		"""
+		Changes the mesh CellVariable value based on position of cells and the rate of exchange.
+		TDB: Write a more elegant solution that can be changed from a master script, not from the 
+		__init__.py code.
+		"""
+		for spec in self.species.itervalues():
+			spec.eq.solve(var=spec,dt=self.cellspace.dt)
+			#spec.setValue(spec+0.2, where=self.mask) # This is just a test code.
 		##}}}
 	def add_species(self,name,degradation,diffusion,kin,kout,value=0.,**kwargs):
 		##{{{
@@ -231,7 +268,7 @@ class solspace(object):
 		"""
 		Evolve the system
 		"""
-		self._get_position()
+		#self._get_position()
 		self._update_interface()
 		self._exchange()
 
