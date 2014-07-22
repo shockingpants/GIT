@@ -157,7 +157,11 @@ class biochemistry(object):
 		Update color of cell based on reporter
 		"""
 		if "reportercolor" in vars(self):
+<<<<<<< HEAD
 			ratio=(self.values[-1,self.ind]-self.fmin)/(self.fmax-self.fmin)
+=======
+			ratio=(self.de.y[self.ind]-self.fmin)/(self.fmax-self.fmin)
+>>>>>>> Macpro
 			if ratio < 0.0:
 				self.cell.color=(255,255,255)
 			elif ratio > 1.0:
@@ -174,8 +178,23 @@ class biochemistry(object):
 		"""
 		Get latest value of species corresponding to the name
 		"""
-		return self.values[self.names.index[name]][-1]
+		try:
+			return self.values[:,self.names.index(name)][-1]
+		except:
+			return self.values[:,self.names.index(name)]
 		##}}}
+
+	def set_latest(self,name,value):
+		##{{{
+		"""
+		Get latest value of species corresponding to the name
+		"""
+		try:
+			self.values[:,self.names.index(name)][-1]=value
+		except:
+			self.values[:,self.names.index(name)]=value
+		##}}}
+
 
 	def run(self,dt):
 		##{{{
