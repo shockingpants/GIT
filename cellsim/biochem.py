@@ -36,31 +36,48 @@ class biochemistry(object):
 	Will want to add symbolic py eventually.
 	Assumes two compartments. Cell and solution
 	"""
-	def __init__(self,func,y0,t0=0,dt=0.1,vol=None,param=None,integrator="SDE",method="rk"):
+	def __init__(self,func,names,y0,t0=0,dt=0.1,vol=None,param=None,integrator="SDE",method="rk"):
 		##{{{
 		"""
 		func is the function coding the ODE
 		vol is volume. It is also a proxy to vary the noise
 		param is the parameter for func
-		integrator is the type of integrator. SDE or ODE
+		integrator is the type of integrator. "SDE" or "ODE"
 		method is either "euler" (Euler M) or "rk" (Runge Kutta)
 		"""
 		self.t0=t0
 		self.time=[t0]
 		self.dt=dt
-
 		self.y0=np.array(y0)
+		self.integrator=integrator
+		self.method=method
+		self.param=param
+		self.func=func
+		self.vol=vol
+		assert len(names)==len(y0)
+		self.names=names #These are the names of the species. The order should correspond to order of
+						 # appearance in func.
 		#Should insert an assert statement that checks func and y0
 		self.values=np.array([y0])
+		self.de=self.set_integrator(self.t0,self.y0,self.integrator)
+		##}}}
 
+	def set_integrator(self,t,y,integrator="SDE"):
+		##{{{
+		"""
+		"""
 		if integrator=="SDE":
-			self.de=SDE_integrator(func,method=method)
-			self.de.set_initial_value(y0,t0) #Adds parameter
-			self.de.set_parameters(param)
+			de=SDE_integrator(self.func,vol=self.vol,method=self.method)
+			de.set_initial_value(y,t) #Adds parameter
+			de.set_parameters(self.param)
 
 		elif integrator=="ODE":
-			self.de=od(func).set_integrator(integrator,method=int_method,**kwargs) 
-			self.de.set_initial_value(y0,t0).set_f_params(param) #Adds parameter
+			ODEintegrator="vode"
+			de=od(self.func).set_integrator(self.ODEintegrator,method=method,**kwargs) 
+			de.set_initial_value(y,t).set_f_params(self.param) #Adds parameter
+
+		return de
+
 		##}}}
 
 	def assign_cell(self,cell):
@@ -83,8 +100,10 @@ class biochemistry(object):
 		de=self.de
 		if de.successful():
 			de.integrate(de.t+dt)
-			self.time.append(de.t)
-			self.values=np.concatenate((self.values,np.array([de.y])),axis=0)
+			#self.time.append(de.t)
+			#self.values=np.concatenate((self.values,np.array([de.y])),axis=0)
+			self.time=de.t
+			self.values=de.y
 		else:
 			print de.successful()
 		##}}}
@@ -108,7 +127,7 @@ class biochemistry(object):
 		pass
 		##}}}
 
-	def reporter(self,ind,color="#FF0000",fmin=0,fmax=20):
+	def reporter(self,ind,color="#FF0000",fmin=0,fmax=1):
 		##{{{
 		"""
 		Change cell color based on protein concentration
@@ -138,16 +157,24 @@ class biochemistry(object):
 		Update color of cell based on reporter
 		"""
 		if "reportercolor" in vars(self):
-			ratio=(self.values[-1,self.ind]-self.fmin)/(self.fmax-self.fmin)
+			ratio=(self.de.y[-1,self.ind]-self.fmin)/(self.fmax-self.fmin)
 			if ratio < 0.0:
-				self.color=(255,255,255)
+				self.cell.color=(255,255,255)
 			elif ratio > 1.0:
-				self.color=self.reportercolor
+				self.cell.color=self.reportercolor
 			else:
-				self.color=self.reportercolor+ratio*(np.array((255,255,255))-np.array(self.reportercolor))
+				self.cell.color=np.array((255,255,255))-ratio*(np.array((255,255,255))-np.array(self.reportercolor))
 		else:
 			pass
 
+		##}}}
+	
+	def get_latest(self,name):
+		##{{{
+		"""
+		Get latest value of species corresponding to the name
+		"""
+		return self.values[self.names.index[name]][-1]
 		##}}}
 
 	def run(self,dt):
@@ -160,12 +187,25 @@ class biochemistry(object):
 		self.updatecells(dt)
 		##}}}
 	
-	def divide(self,cell):
+	def divide(self):
 		##{{{
 		"""
+		Need to determine which variable in biochem should be copied over
+		Use copy.copy
 		https://docs.python.org/2/library/copy.html
 		"""
-		cell.biochem=copy(self)
-		cell.biochem.assign_cell(cell)
+		cp=copy.copy #To cope instead of referencing a variable
+		temp=biochemistry(cp(self.func),cp(self.names),cp(self.de.y),t0=cp(self.de.t),dt=cp(self.dt),vol=cp(self.vol),param=cp(self.param),\
+		integrator=cp(self.integrator),method=cp(self.method))
+		temp.de=temp.set_integrator(cp(self.de.t), cp(self.de.y), cp(self.integrator))
+		temp.values=cp(self.values)
+		temp.time=cp(self.time)
+		temp.reportercolor=cp(self.reportercolor)
+		temp.ind=cp(self.ind)
+		temp.fmin=cp(self.fmin)
+		temp.fmax=cp(self.fmax)
+		return temp
+
 		##}}}
-		
+	
+		##}}}

@@ -278,6 +278,7 @@ def SDE(func,y0,t0=0,t1=50,dt=0.1,param=None,vol=None,method='rk',**kwargs):
 	##}}}
 
 def example():
+	##{{{
 	"""
 import cellsim
 import cellsim.integrator as ode
@@ -310,3 +311,4 @@ plt.legend()
 plt.show()
 	"""
 	pass
+	##}}}
